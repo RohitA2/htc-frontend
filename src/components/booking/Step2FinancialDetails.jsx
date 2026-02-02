@@ -236,7 +236,7 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                                         value={formData.commissionBankAccountNo || ''}
                                         onChange={handleChange}
                                         placeholder="Will auto-fill when bank is selected"
-                                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white bg-gray-50 dark:bg-gray-800"
+                                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white bg-gray-50"
                                         readOnly={!!formData.commissionBankAccountNo}
                                     />
                                 </div>
@@ -405,7 +405,7 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                                         value={formData.differenceBankAccountNo || ''}
                                         onChange={handleChange}
                                         placeholder="Will auto-fill when bank is selected"
-                                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white bg-gray-50 dark:bg-gray-800"
+                                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white bg-gray-50"
                                         readOnly={!!formData.differenceBankAccountNo}
                                     />
                                 </div>
@@ -512,7 +512,7 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                         <button
                             type="button"
                             onClick={handleCalculate}
-                            className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md"
+                            className="w-full py-3 bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md"
                         >
                             Recalculate All Amounts
                         </button>
@@ -521,7 +521,7 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
 
                 {/* Financial Summary */}
                 {hasCalculations ? (
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 p-6 rounded-xl border border-blue-200 dark:border-gray-700 shadow-sm">
+                    <div className="bg-linear-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 p-6 rounded-xl border border-blue-200 dark:border-gray-700 shadow-sm">
                         <h3 className="text-xl font-semibold mb-6 text-gray-800 dark:text-gray-200">Financial Summary</h3>
 
                         {/* Party Account */}

@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-
+import { X } from 'lucide-react';
 import Step1BookingAndTruck from './Step1BookingAndTruck';
 import Step2FinancialDetails from './Step2FinancialDetails';
 import Step3ReviewAndSubmit from './Step3ReviewAndSubmit';
+import { toast } from 'react-toastify';
 
 const calculateFreight = (rate, weight) => {
     if (!rate || !weight) return 0;
     return Number(rate) * Number(weight);
 };
+
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const calculateAll = (formData) => {
     const partyRate = Number(formData.rate) || 0;
@@ -57,15 +60,17 @@ const calculateAll = (formData) => {
     };
 };
 
-const BookingForm = () => {
+const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
     const [activeStep, setActiveStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [isVisible, setIsVisible] = useState(true);
+    const [showConfirm, setShowConfirm] = useState(false);
 
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
-        bookingType: 'normal',
+        bookingType: 'commission only',
         companyId: '',
         partyName: '',
         partyPhone: '',
@@ -108,6 +113,18 @@ const BookingForm = () => {
         differencePaymentType: '',
         differenceBankAccountNo: '',
         differenceUtrNo: '',
+        haltingDetails: {
+            arrivalTime: '',
+            unloadingStartTime: '',
+            unloadingEndTime: '',
+            estimatedHours: '', // New field for initial booking
+            haltingReason: '',
+            haltingCharges: '',
+            haltingPaymentStatus: 'pending',
+            haltingPaymentMode: '',
+            haltingPaidAmount: '',
+            haltingRemark: ''
+        },
     });
 
     const [calculations, setCalculations] = useState({
@@ -123,6 +140,94 @@ const BookingForm = () => {
     });
 
     const steps = ['Booking & Truck Details', 'Financial Details', 'Review & Submit'];
+
+    // Load booking data when component mounts or when booking prop changes
+    useEffect(() => {
+        if (isEditMode && booking) {
+            loadBookingData(booking);
+        }
+    }, [isEditMode, booking]);
+
+    const loadBookingData = (bookingData) => {
+        // Extract commission data
+        const commissionData = bookingData.commissions?.[0] || {};
+        const haltingData = bookingData.haltingDetails?.[0] || {};
+
+        // Calculate commission type
+        let commissionType = '';
+        if (commissionData.commissionType) {
+            commissionType = commissionData.commissionType;
+        } else if (bookingData.commissionAmount > 0) {
+            // Try to infer from commission amount
+            commissionType = 'party';
+        }
+
+        // Prepare form data from booking
+        const newFormData = {
+            date: bookingData.date ? new Date(bookingData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            bookingType: bookingData.bookingType || 'commission only',
+            companyId: bookingData.companyId || '',
+            partyName: bookingData.Party?.partyName || '',
+            partyPhone: bookingData.Party?.partyPhone || '',
+            partyAddress: bookingData.Party?.partyAddress || '',
+            commodity: bookingData.commodity || '',
+            rate: bookingData.rate || '',
+            weight: bookingData.weight || '',
+            weightType: bookingData.weightType || 'kg',
+            fromLocation: bookingData.fromLocation || '',
+            toLocation: bookingData.toLocation || '',
+            truckNo: bookingData.Truck?.truckNo || '',
+            tyreCount: bookingData.Truck?.tyreCount || '',
+            driverName: bookingData.Truck?.driverName || '',
+            driverPhone: bookingData.Truck?.driverPhone || '',
+            transporterName: bookingData.Truck?.transporterName || '',
+            transporterPhone: bookingData.Truck?.transporterPhone || '',
+            truckRate: bookingData.truckRate || '',
+            truckWeight: bookingData.weight || '', // Using same weight as party weight
+            truckWeightType: bookingData.weightType || 'kg',
+
+            commissionPercentage: '',
+            commissionAmount: bookingData.commissionAmount || '',
+            commissionRemark: commissionData.remark || '',
+            commissionType: commissionType,
+            truckCommissionAmount: commissionData.commissionType === 'truck' ? commissionData.amount : '',
+
+            differenceAmount: bookingData.differenceAmount || '',
+            diffRemark: '',
+            initialPaymentToTruck: bookingData.truckPayments?.[0]?.amount || '',
+            initialPaymentFromParty: bookingData.partyPayments?.[0]?.amount || '',
+
+            commissionGivenDate: commissionData.paymentDate || '',
+            commissionPaymentMode: commissionData.paymentMode || '',
+            commissionPaymentType: commissionData.paymentType || '',
+            commissionBankAccountNo: commissionData.bankAccountNo || '',
+            commissionUtrNo: commissionData.utrNo || '',
+
+            differenceGivenDate: '',
+            differencePaymentMode: '',
+            differencePaymentType: '',
+            differenceBankAccountNo: '',
+            differenceUtrNo: '',
+            haltingDetails: {
+                arrivalTime: haltingData.arrivalTime || '',
+                unloadingStartTime: haltingData.unloadingStartTime || '',
+                unloadingEndTime: haltingData.unloadingEndTime || '',
+                estimatedHours: haltingData.estimatedHours || '', // Load estimated hours
+                haltingReason: haltingData.haltingReason || '',
+                haltingCharges: haltingData.haltingCharges || '',
+                haltingPaymentStatus: haltingData.haltingPaymentStatus || 'pending',
+                haltingPaymentMode: haltingData.haltingPaymentMode || '',
+                haltingPaidAmount: haltingData.haltingPaidAmount || '',
+                haltingRemark: haltingData.haltingRemark || ''
+            },
+        };
+
+        setFormData(newFormData);
+
+        // Calculate initial values
+        const newCalcs = calculateAll(newFormData);
+        setCalculations(newCalcs);
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -212,12 +317,20 @@ const BookingForm = () => {
     const handleNext = () => setActiveStep(prev => prev + 1);
     const handleBack = () => setActiveStep(prev => prev - 1);
 
+    const handleClose = () => {
+        setIsVisible(false);
+        if (onClose) {
+            onClose();
+        }
+    };
+
     const handleSubmit = async () => {
         setLoading(true);
         setError('');
         setSuccess('');
 
         try {
+            const token = localStorage.getItem('token');
             const payload = {
                 ...formData,
                 rate: Number(formData.rate) || 0,
@@ -246,70 +359,110 @@ const BookingForm = () => {
                 differencePaymentType: formData.differencePaymentType || null,
                 differenceBankAccountNo: formData.differenceBankAccountNo || null,
                 differenceUtrNo: formData.differenceUtrNo || null,
+                haltingDetails: [{
+                    arrivalTime: formData.haltingDetails.arrivalTime || null,
+                    unloadingStartTime: formData.haltingDetails.unloadingStartTime || null,
+                    unloadingEndTime: formData.haltingDetails.unloadingEndTime || null,
+                    estimatedHours: Number(formData.haltingDetails.estimatedHours) || 0, // New field
+                    haltingReason: formData.haltingDetails.haltingReason || null,
+                    haltingCharges: Number(formData.haltingDetails.haltingCharges) || 0,
+                    haltingPaymentStatus: formData.haltingDetails.haltingPaymentStatus || 'pending',
+                    haltingPaymentMode: formData.haltingDetails.haltingPaymentMode || null,
+                    haltingPaidAmount: Number(formData.haltingDetails.haltingPaidAmount) || 0,
+                    haltingRemark: formData.haltingDetails.haltingRemark || null
+                }],
             };
 
-            const response = await axios.post('/api/bookings', payload);
-
-            setSuccess('Booking created successfully!');
-
-            setTimeout(() => {
-                setFormData({
-                    date: new Date().toISOString().split('T')[0],
-                    bookingType: 'normal',
-                    companyId: '',
-                    partyName: '',
-                    partyPhone: '',
-                    partyAddress: '',
-                    commodity: '',
-                    rate: '',
-                    weight: '',
-                    weightType: 'kg',
-                    fromLocation: '',
-                    toLocation: '',
-                    truckNo: '',
-                    tyreCount: '',
-                    driverName: '',
-                    driverPhone: '',
-                    transporterName: '',
-                    transporterPhone: '',
-                    truckRate: '',
-                    truckWeight: '',
-                    truckWeightType: 'kg',
-                    commissionPercentage: '',
-                    commissionAmount: '',
-                    commissionRemark: '',
-                    commissionType: '',
-                    truckCommissionAmount: '',
-                    differenceAmount: '',
-                    diffRemark: '',
-                    initialPaymentToTruck: '',
-                    initialPaymentFromParty: '',
-                    commissionGivenDate: '',
-                    commissionPaymentMode: '',
-                    commissionPaymentType: '',
-                    commissionBankAccountNo: '',
-                    commissionUtrNo: '',
-                    differenceGivenDate: '',
-                    differencePaymentMode: '',
-                    differencePaymentType: '',
-                    differenceBankAccountNo: '',
-                    differenceUtrNo: '',
+            let response;
+            if (isEditMode && booking) {
+                // Update existing booking
+                response = await axios.put(`${API_URL}/booking/update/${booking.id}`, payload, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
                 });
-                setCalculations({
-                    partyFreight: 0,
-                    truckFreight: 0,
-                    commissionAmount: 0,
-                    differenceAmount: 0,
-                    partyNetAmount: 0,
-                    truckNetAmount: 0,
-                    partyPending: 0,
-                    truckPending: 0,
-                    rawDifference: 0,
+                toast.success('Booking updated successfully!');
+                setSuccess('Booking updated successfully!');
+            } else {
+                // Create new booking
+                response = await axios.post(`${API_URL}/booking/create`, payload, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
                 });
-                setActiveStep(0);
-            }, 2000);
+                toast.success('Booking created successfully!');
+                setSuccess('Booking created successfully!');
+            }
+
+            // Call onSuccess prop to close modal and refresh list
+            if (onSuccess) {
+                onSuccess();
+            }
+
+            // Reset form if creating new booking
+            if (!isEditMode) {
+                setTimeout(() => {
+                    setFormData({
+                        date: new Date().toISOString().split('T')[0],
+                        bookingType: 'commission only',
+                        companyId: '',
+                        partyName: '',
+                        partyPhone: '',
+                        partyAddress: '',
+                        commodity: '',
+                        rate: '',
+                        weight: '',
+                        weightType: 'kg',
+                        fromLocation: '',
+                        toLocation: '',
+                        truckNo: '',
+                        tyreCount: '',
+                        driverName: '',
+                        driverPhone: '',
+                        transporterName: '',
+                        transporterPhone: '',
+                        truckRate: '',
+                        truckWeight: '',
+                        truckWeightType: 'kg',
+                        commissionPercentage: '',
+                        commissionAmount: '',
+                        commissionRemark: '',
+                        commissionType: '',
+                        truckCommissionAmount: '',
+                        differenceAmount: '',
+                        diffRemark: '',
+                        initialPaymentToTruck: '',
+                        initialPaymentFromParty: '',
+                        commissionGivenDate: '',
+                        commissionPaymentMode: '',
+                        commissionPaymentType: '',
+                        commissionBankAccountNo: '',
+                        commissionUtrNo: '',
+                        differenceGivenDate: '',
+                        differencePaymentMode: '',
+                        differencePaymentType: '',
+                        differenceBankAccountNo: '',
+                        differenceUtrNo: '',
+                    });
+                    setCalculations({
+                        partyFreight: 0,
+                        truckFreight: 0,
+                        commissionAmount: 0,
+                        differenceAmount: 0,
+                        partyNetAmount: 0,
+                        truckNetAmount: 0,
+                        partyPending: 0,
+                        truckPending: 0,
+                        rawDifference: 0,
+                    });
+                    setActiveStep(0);
+                }, 2000);
+            }
         } catch (err) {
-            setError(err.response?.data?.message || 'Error creating booking');
+            setError(err.response?.data?.message || `Error ${isEditMode ? 'updating' : 'creating'} booking`);
+            console.error(`Error ${isEditMode ? 'updating' : 'creating'} booking:`, err);
         } finally {
             setLoading(false);
         }
@@ -341,21 +494,47 @@ const BookingForm = () => {
         }
     };
 
+    // Function to show confirmation before closing
+    const showCloseConfirmation = () => {
+        const hasChanges = activeStep > 0 || Object.values(formData).some(value => value !== '' && value !== null && value !== undefined);
+        if (hasChanges) {
+            setShowConfirm(true);
+        } else {
+            handleClose();
+        }
+    };
+
+    if (!isVisible) return null;
+
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center px-4 py-10 bg-black/50">
+            <div className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl overflow-hidden w-full max-w-6xl">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6 text-white">
-                    <h1 className="text-3xl font-bold">Create New Booking</h1>
-                    <p className="mt-2 text-blue-100">Fill in the details step by step to create a new transport booking</p>
+                <div className="bg-linear-to-r from-blue-600 to-indigo-600 px-8 py-4 text-white flex justify-between items-center">
+                    <div>
+                        <h1 className="text-2xl font-bold">
+                            {isEditMode ? 'Edit Booking' : 'Create New Booking'}
+                        </h1>
+                        <p className="mt-1 text-blue-100 text-sm">
+                            {isEditMode ? `Editing Booking ID: ${booking?.id}` : 'Fill in the details step by step'}
+                        </p>
+                    </div>
+                    <button
+                        onClick={showCloseConfirmation}
+                        className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                    >
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
 
                 {/* Progress Steps */}
-                <div className="px-8 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="px-8 pt-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                     <div className="flex justify-between items-center">
                         {steps.map((step, index) => (
                             <div key={index} className="flex-1 flex flex-col items-center">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300
                   ${index === activeStep
                                         ? 'bg-blue-600 border-blue-600 text-white shadow-lg'
                                         : index < activeStep
@@ -364,11 +543,11 @@ const BookingForm = () => {
                                 >
                                     {index + 1}
                                 </div>
-                                <span className="mt-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <span className="mt-1 text-xs font-medium text-gray-700 dark:text-gray-300 truncate w-full text-center">
                                     {step}
                                 </span>
                                 {index < steps.length - 1 && (
-                                    <div className={`h-1 w-full mt-4 rounded-full transition-all duration-300
+                                    <div className={`h-1 w-full mt-1 rounded-full transition-all duration-300
                     ${index < activeStep ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`}
                                     />
                                 )}
@@ -377,30 +556,18 @@ const BookingForm = () => {
                     </div>
                 </div>
 
-                {/* Messages */}
-                {error && (
-                    <div className="mx-8 mt-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-lg">
-                        <p>{error}</p>
-                    </div>
-                )}
-                {success && (
-                    <div className="mx-8 mt-4 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded-r-lg">
-                        <p>{success}</p>
-                    </div>
-                )}
-
-                {/* Form Content */}
-                <div className="p-8">
+                {/* Form Content - Thin Scrollbar */}
+                <div className="p-6 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
                     {renderStep()}
                 </div>
 
                 {/* Navigation */}
-                <div className="px-8 py-6 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+                <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-between">
                     <button
                         type="button"
                         onClick={handleBack}
                         disabled={activeStep === 0}
-                        className={`px-6 py-3 rounded-lg font-medium transition-colors
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm
               ${activeStep === 0
                                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 : 'bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200'}`}
@@ -413,31 +580,58 @@ const BookingForm = () => {
                             type="button"
                             onClick={handleSubmit}
                             disabled={loading}
-                            className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            className="px-6 py-2 bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
                         >
                             {loading ? (
                                 <>
-                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                                     </svg>
-                                    <span>Submitting...</span>
+                                    <span>{isEditMode ? 'Updating...' : 'Submitting...'}</span>
                                 </>
                             ) : (
-                                'Submit Booking'
+                                `${isEditMode ? 'Update' : 'Submit'} Booking`
                             )}
                         </button>
                     ) : (
                         <button
                             type="button"
                             onClick={handleNext}
-                            className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md"
+                            className="px-6 py-2 bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md text-sm"
                         >
                             Next →
                         </button>
                     )}
                 </div>
             </div>
+            {showConfirm && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl">
+                        <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Discard changes?</h3>
+                        <p className="text-gray-600 dark:text-gray-300 mb-6">
+                            You have unsaved changes. Closing will lose them.
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setShowConfirm(false)}
+                                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowConfirm(false);
+                                    handleClose();
+                                }}
+                                className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg"
+                            >
+                                Discard & Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -17,12 +17,16 @@ const Layout = lazy(() => import('./components/Layouts/DefaultLayout'));
 const SearchPage = lazy(() => import('./components/pages/SearchPage'));
 const Company = lazy(() => import('./components/company/Company'));
 const BankPage = lazy(() => import('./components/bank/BankPage'));
-const BookingForm = lazy(() => import('./components/booking/BookingForm'));
+// const BookingForm = lazy(() => import('./components/booking/BookingForm'));
 
 const Login = lazy(() => import('./components/pages/Login'));
 const Register = lazy(() => import('./components/pages/Register'));
 const Profile = lazy(() => import('./components/pages/ProfilePage'));
 const ChangePassword = lazy(() => import('./components/pages/ChangePasswordPage'));
+const BookingList = lazy(() => import('./components/booking/BookingsListPage'));
+const ChallanList = lazy(() => import('./components/challan/ChallanList'));
+const PartyLedger = lazy(() => import('./components/partyLedger/PartyLedgerPage'))
+const VendorLedger = lazy(() => import('./components/vendorLedger/vendorLedgerpage'))
 
 const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
 
@@ -30,7 +34,21 @@ const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
 const App = () => {
   return (
     <Provider store={store}>
-      <ToastContainer position="top-right" autoClose={3000} />
+      <>
+        {/* your routes / layout */}
+        <ToastContainer
+          position="top-right"
+          autoClose={4000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored"
+        />
+      </>
       <Router>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
@@ -44,7 +62,11 @@ const App = () => {
                 <Route path="/" element={<SearchPage />} />
                 <Route path="/company" element={<Company />} />
                 <Route path="/bank" element={<BankPage />} />
-                <Route path="/booking" element={<BookingForm />} />
+                <Route path="/booking" element={<BookingList />} />
+                <Route path="/challan" element={<ChallanList />} />
+                <Route path="/booking-list" element={<BookingList />} />
+                <Route path="/party-payments" element={<PartyLedger />} />
+                <Route path="/vendor-payments" element={<VendorLedger />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/change-password" element={<ChangePassword />} />
               </Route>

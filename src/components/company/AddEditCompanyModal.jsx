@@ -12,7 +12,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 
-// InputField Component (stable - बाहर define किया)
+
 const InputField = ({
   label,
   name,
@@ -204,12 +204,12 @@ const AddEditCompanyModal = ({ company, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto transform transition-all animate-scale-in">
+      <div className="bg-linear-to-br from-white to-gray-50 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto transform transition-all animate-scale-in">
         <div className="p-6">
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 rounded-xl">
+              <div className="p-3 bg-linear-to-br from-blue-100 to-blue-50 rounded-xl">
                 <Building className="w-6 h-6 text-blue-600" />
               </div>
               <div>
@@ -232,7 +232,7 @@ const AddEditCompanyModal = ({ company, onClose, onSave }) => {
           <form onSubmit={handleSubmit}>
             <div className="space-y-8">
               {/* Company Information */}
-              <div className="bg-gradient-to-br from-blue-50/30 to-blue-50/10 rounded-2xl p-6">
+              <div className="bg-linear-to-br from-blue-50/30 to-blue-50/10 rounded-2xl p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                   <Building className="w-5 h-5" />
                   Company Information
@@ -274,7 +274,7 @@ const AddEditCompanyModal = ({ company, onClose, onSave }) => {
               </div>
 
               {/* Tax Details */}
-              <div className="bg-gradient-to-br from-green-50/30 to-green-50/10 rounded-2xl p-6">
+              <div className="bg-linear-to-br from-green-50/30 to-green-50/10 rounded-2xl p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                   <FileText className="w-5 h-5" />
                   Tax Details
@@ -304,7 +304,7 @@ const AddEditCompanyModal = ({ company, onClose, onSave }) => {
               </div>
 
               {/* Contact Person */}
-              <div className="bg-gradient-to-br from-purple-50/30 to-purple-50/10 rounded-2xl p-6">
+              <div className="bg-linear-to-br from-purple-50/30 to-purple-50/10 rounded-2xl p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                   <User className="w-5 h-5" />
                   Contact Person
@@ -346,7 +346,7 @@ const AddEditCompanyModal = ({ company, onClose, onSave }) => {
               </div>
 
               {/* Additional Information */}
-              <div className="bg-gradient-to-br from-gray-50/30 to-gray-50/10 rounded-2xl p-6">
+              <div className="bg-linear-to-br from-gray-50/30 to-gray-50/10 rounded-2xl p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                   <FileText className="w-5 h-5" />
                   Additional Information
@@ -407,7 +407,7 @@ const AddEditCompanyModal = ({ company, onClose, onSave }) => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-md hover:shadow-lg font-medium disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-8 py-3 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-md hover:shadow-lg font-medium disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <>

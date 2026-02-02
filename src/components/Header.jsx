@@ -73,7 +73,7 @@ const Header = () => {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-2xl">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-linear-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-2xl">
         <div className="h-22 flex items-center justify-between px-4 md:px-6 lg:px-8">
           {/* Left: Logo & Navigation */}
           <div className="flex items-center gap-4 md:gap-8">
@@ -86,10 +86,10 @@ const Header = () => {
                 <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center ring-2 ring-white/30 group-hover:ring-white/50 transition-all duration-300">
                   <Truck className="w-6 h-6 text-white" />
                 </div>
-                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl blur opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
+                <div className="absolute -inset-1 bg-linear-to-r from-blue-500 to-purple-500 rounded-xl blur opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
               </div>
               <div className="hidden md:block">
-                <h1 className="text-xl font-bold tracking-tight">HTC Transport</h1>
+                <h1 className="text-xl font-bold tracking-tight">STC Transport</h1>
                 <p className="text-xs text-blue-100 font-medium">Logistics & Transport</p>
               </div>
             </div>
@@ -215,7 +215,7 @@ const Header = () => {
                   </p>
                 </div>
                 <div className="relative">
-                  <div className="w-9 h-9 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center ring-2 ring-white/30 group-hover:ring-white/50 transition-all duration-300">
+                  <div className="w-9 h-9 bg-linear-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center ring-2 ring-white/30 group-hover:ring-white/50 transition-all duration-300">
                     {user?.profileImage ? (
                       <img
                         src={user.profileImage}
@@ -228,7 +228,7 @@ const Header = () => {
                       </span>
                     )}
                   </div>
-                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full blur opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
+                  <div className="absolute -inset-1 bg-linear-to-r from-blue-400 to-purple-500 rounded-full blur opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
                 </div>
                 <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''
                   }`} />
@@ -240,7 +240,7 @@ const Header = () => {
                   {/* User Info */}
                   <div className="px-4 py-4 border-b border-gray-100">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                      <div className="w-12 h-12 bg-linear-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
                         {getInitials(user?.fullName || user?.firstName)}
                       </div>
                       <div>
@@ -308,7 +308,7 @@ const Header = () => {
                   {/* Footer */}
                   <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
                     <p className="text-xs text-gray-500">
-                      HTC Transport v2.0
+                      STC Transport v2.0
                     </p>
                   </div>
                 </div>

@@ -15,6 +15,7 @@ import {
     Contact,
     Users,
     ChevronRight,
+    IndianRupee
 } from 'lucide-react';
 
 const menuGroups = [
@@ -24,8 +25,15 @@ const menuGroups = [
             { icon: Building2, label: 'Company', to: '/company' },
             { icon: Landmark, label: "Bank's", to: '/bank' },
             { icon: Calendar, label: 'Booking Register', to: '/booking' },
-            { icon: Receipt, label: 'Bilty register', to: '/bilty-register' },
-            { icon: Landmark, label: 'Banking Register', to: '/banking-register' },
+            // { icon: Receipt, label: 'Bilty register', to: '/bilty-register' },
+            { icon: Receipt, label: 'Challan Register', to: '/challan' },
+            {
+                icon: IndianRupee, label: 'Payments',
+                children: [
+                    { label: 'Party', to: '/party-payments' },
+                    { label: 'Vendor', to: '/vendor-payments' },
+                ],
+            },
             { icon: TrendingUp, label: 'Pending Banking Register', to: '/pending-banking-register' },
             { icon: CreditCard, label: 'Create Multi Payment', to: '/create-multi-payment' },
             { icon: Receipt, label: 'Multi Payment Register', to: '/multi-paymen-register' },
@@ -66,7 +74,7 @@ const menuGroups = [
                     { label: 'Cash or Bank', to: '/bankPartyLedger' },
                 ],
             },
-            { icon: Receipt, label: 'Challan Register', to: '/challan' },
+
             { icon: Contact, label: 'Contact register', to: '/contact-register' },
             { icon: Users, label: 'User', to: '/user-register' },
         ],
@@ -112,7 +120,7 @@ const Sidebar = () => {
                                                         }`
                                                     }
                                                 >
-                                                    <Icon className="w-6 h-6 flex-shrink-0" />
+                                                    <Icon className="w-6 h-6 shrink-0" />
                                                     <span className="whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                                         {item.label}
                                                     </span>
@@ -120,13 +128,13 @@ const Sidebar = () => {
                                             ) : (
                                                 <div className="group/item flex items-center justify-between px-4 py-3 rounded-xl hover:bg-neutral-800 cursor-pointer transition-all duration-200">
                                                     <div className="flex items-center gap-4">
-                                                        <Icon className="w-6 h-6 flex-shrink-0" />
+                                                        <Icon className="w-6 h-6 shrink-0" />
                                                         <span className="whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                                             {item.label}
                                                         </span>
                                                     </div>
                                                     {item.children && (
-                                                        <ChevronRight className="w-5 h-5 flex-shrink-0 text-neutral-500 transition-transform duration-300 group-hover/li:rotate-90 group-hover/li:text-indigo-400" />
+                                                        <ChevronRight className="w-5 h-5 shrink-0 text-neutral-500 transition-transform duration-300 group-hover/li:rotate-90 group-hover/li:text-indigo-400" />
                                                     )}
                                                 </div>
                                             )}

@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calculations }) => {
-    console.log('formData is', formData);
-    console.log('handleCalculate is', handleCalculate);
-    console.log('calculations is', calculations);
-    console.log('handleChange is', handleChange);
+    // console.log('formData is', formData);
+    // console.log('handleCalculate is', handleCalculate);
+    // console.log('calculations is', calculations);
+    // console.log('handleChange is', handleChange);
     const [companies, setCompanies] = useState([]);
     const [loadingCompanies, setLoadingCompanies] = useState(false);
     const [loadingParties, setLoadingParties] = useState(false);
@@ -310,7 +310,7 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                                     type="button"
                                     onClick={handleAddNewParty}
                                     disabled={addingParty || !newParty.partyName.trim()}
-                                    className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all font-medium disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    className="flex-1 px-4 py-3 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all font-medium disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
                                     {addingParty ? (
                                         <>
@@ -834,7 +834,7 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                             type="button"
                             onClick={handleCalculate}
                             disabled={!formData.rate || !formData.weight || !formData.truckRate || !formData.truckWeight}
-                            className="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            className="px-8 py-4 bg-linear-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 011.167.534 7.002 7.002 0 001.667 1.667 7.002 7.002 0 00.534 1.167L17 11a1 1 0 010 2l-2.101.667a7.002 7.002 0 00-.534 1.167 7.002 7.002 0 00-1.667 1.667 7.002 7.002 0 00-1.167.534L11 17a1 1 0 01-2 0l-.667-2.101a7.002 7.002 0 00-1.167-.534 7.002 7.002 0 00-1.667-1.667 7.002 7.002 0 00-.534-1.167L3 13a1 1 0 010-2l2.101-.667a7.002 7.002 0 00.534-1.167 7.002 7.002 0 001.667-1.667 7.002 7.002 0 001.167-.534L9 5a1 1 0 012 0l.667 2.101a7.002 7.002 0 001.167.534 7.002 7.002 0 001.667 1.667 7.002 7.002 0 00.534 1.167L17 9a1 1 0 010 2l-2.101.667a7.002 7.002 0 00-.534 1.167 7.002 7.002 0 00-1.667 1.667 7.002 7.002 0 00-1.167.534L11 15a1 1 0 01-2 0l-.667-2.101a7.002 7.002 0 00-1.167-.534 7.002 7.002 0 00-1.667-1.667 7.002 7.002 0 00-.534-1.167L3 11a1 1 0 010-2l2.101-.667a7.002 7.002 0 00.534-1.167 7.002 7.002 0 001.667-1.667 7.002 7.002 0 001.167-.534L9 3a1 1 0 012 0v2.101a7.002 7.002 0 011.167-.534 7.002 7.002 0 011.167-.534L11 3z" clipRule="evenodd" />

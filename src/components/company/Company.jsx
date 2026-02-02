@@ -255,7 +255,7 @@ const CompanyPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-3 sm:p-4 md:p-6 lg:p-8 xl:p-12">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 p-3 sm:p-4 md:p-6 lg:p-8 xl:p-12">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4">
@@ -274,7 +274,7 @@ const CompanyPage = () => {
             </button>
             <button
               onClick={handleAddCompany}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md text-sm"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md text-sm"
             >
               <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
               <span>Add Company</span>
@@ -285,19 +285,19 @@ const CompanyPage = () => {
 
       {/* Stats Cards - responsive grid */}
       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md p-4 border border-gray-100">
+        <div className="bg-linear-to-br from-white to-gray-50 rounded-xl shadow-md p-4 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs sm:text-sm text-gray-600 font-medium">Total Companies</p>
               <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mt-1">{totalCount}</p>
             </div>
-            <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg" />
+            <div className="p-2 sm:p-3 rounded-xl bg-linear-to-br from-blue-100 to-blue-50">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-linear-to-r from-blue-500 to-blue-600 rounded-lg" />
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md p-4 border border-gray-100">
+        <div className="bg-linear-to-br from-white to-gray-50 rounded-xl shadow-md p-4 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs sm:text-sm text-gray-600 font-medium">Active</p>
@@ -305,31 +305,31 @@ const CompanyPage = () => {
                 {companies.filter(c => c.status === 'Active').length}
               </p>
             </div>
-            <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-green-100 to-green-50">
+            <div className="p-2 sm:p-3 rounded-xl bg-linear-to-br from-green-100 to-green-50">
               <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md p-4 border border-gray-100">
+        <div className="bg-linear-to-br from-white to-gray-50 rounded-xl shadow-md p-4 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs sm:text-sm text-gray-600 font-medium">This Page</p>
               <p className="text-xl sm:text-2xl md:text-3xl font-bold text-purple-600 mt-1">{companies.length}</p>
             </div>
-            <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-purple-100 to-purple-50">
+            <div className="p-2 sm:p-3 rounded-xl bg-linear-to-br from-purple-100 to-purple-50">
               <Eye className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md p-4 border border-gray-100">
+        <div className="bg-linear-to-br from-white to-gray-50 rounded-xl shadow-md p-4 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs sm:text-sm text-gray-600 font-medium">Selected</p>
               <p className="text-xl sm:text-2xl md:text-3xl font-bold text-orange-600 mt-1">{selectedCompanies.length}</p>
             </div>
-            <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-orange-100 to-orange-50">
+            <div className="p-2 sm:p-3 rounded-xl bg-linear-to-br from-orange-100 to-orange-50">
               <Filter className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
             </div>
           </div>
@@ -337,7 +337,7 @@ const CompanyPage = () => {
       </div>
 
       {/* Search and Action Bar */}
-      <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md mb-6 sm:mb-8 border border-gray-100 overflow-hidden">
+      <div className="bg-linear-to-br from-white to-gray-50 rounded-xl shadow-md mb-6 sm:mb-8 border border-gray-100 overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-gray-200">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div className="relative flex-1 w-full min-w-0">
@@ -369,7 +369,7 @@ const CompanyPage = () => {
 
               <button
                 onClick={() => setShowExport(true)}
-                className="flex items-center gap-1.5 px-3 sm:px-5 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-md text-sm flex-1 sm:flex-none"
+                className="flex items-center gap-1.5 px-3 sm:px-5 py-2.5 bg-linear-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-md text-sm flex-1 sm:flex-none"
               >
                 <Download className="w-4 h-4" />
                 <span className="hidden sm:inline">Export</span>
@@ -378,7 +378,7 @@ const CompanyPage = () => {
               {selectedCompanies.length > 0 && (
                 <button
                   onClick={handleBulkDelete}
-                  className="flex items-center gap-1.5 px-3 sm:px-5 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all shadow-md text-sm flex-1 sm:flex-none"
+                  className="flex items-center gap-1.5 px-3 sm:px-5 py-2.5 bg-linear-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all shadow-md text-sm flex-1 sm:flex-none"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span className="hidden xs:inline">Delete ({selectedCompanies.length})</span>
@@ -389,7 +389,7 @@ const CompanyPage = () => {
         </div>
 
         {showFilters && (
-          <div className="p-4 sm:p-5 border-t border-gray-200 bg-gradient-to-br from-gray-50 to-white/50">
+          <div className="p-4 sm:p-5 border-t border-gray-200 bg-linear-to-br from-gray-50 to-white/50">
             <CompanyFilter
               filters={filters}
               onFilterChange={handleFilterChange}
@@ -400,10 +400,10 @@ const CompanyPage = () => {
       </div>
 
       {/* Companies Table - scrollable */}
-      <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md overflow-hidden border border-gray-100 max-h-[65vh] sm:max-h-[70vh] md:max-h-[75vh]">
+      <div className="bg-linear-to-br from-white to-gray-50 rounded-xl shadow-md overflow-hidden border border-gray-100 max-h-[65vh] sm:max-h-[70vh] md:max-h-[75vh]">
         {loading ? (
           <div className="p-8 sm:p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-[4px] border-blue-500 border-t-transparent mx-auto"></div>
+            <div className="inline-block animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-4 border-blue-500 border-t-transparent mx-auto"></div>
             <p className="mt-4 text-gray-600 text-base sm:text-lg">Loading companies...</p>
           </div>
         ) : error ? (
@@ -414,7 +414,7 @@ const CompanyPage = () => {
             <p className="text-red-600 text-base sm:text-lg mb-4">Error: {error}</p>
             <button
               onClick={() => fetchCompanies(currentPage, searchTerm, filters)}
-              className="px-5 sm:px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-md text-sm"
+              className="px-5 sm:px-6 py-2.5 bg-linear-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-md text-sm"
             >
               Retry
             </button>
@@ -422,8 +422,8 @@ const CompanyPage = () => {
         ) : (
           <>
             <div className="overflow-auto max-h-[calc(65vh-120px)] sm:max-h-[calc(70vh-140px)] scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-500">
-              <table className="min-w-[1000px] sm:min-w-full w-full divide-y divide-gray-200 table-fixed">
-                <thead className="bg-gradient-to-r from-gray-50 to-gray-100/50 sticky top-0 z-10">
+              <table className="min-w-250 sm:min-w-full w-full divide-y divide-gray-200 table-fixed">
+                <thead className="bg-linear-to-r from-gray-50 to-gray-100/50 sticky top-0 z-10">
                   <tr>
                     <th className="w-10 px-2 sm:px-4 py-2.5 sm:py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       <input
@@ -457,7 +457,7 @@ const CompanyPage = () => {
                   {companies.map((company) => (
                     <tr
                       key={company.id}
-                      className="hover:bg-gradient-to-r hover:from-blue-50/30 hover:to-transparent transition-all duration-150"
+                      className="hover:bg-linear-to-r hover:from-blue-50/30 hover:to-transparent transition-all duration-150"
                     >
                       <td className="px-2 sm:px-4 py-3 sm:py-5 whitespace-nowrap w-10">
                         <input
@@ -517,21 +517,21 @@ const CompanyPage = () => {
                         <div className="flex items-center gap-1.5 sm:gap-2">
                           <button
                             onClick={() => handleViewCompany(company)}
-                            className="p-1.5 sm:p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center"
+                            className="p-1.5 sm:p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center"
                             title="View"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleEditCompany(company)}
-                            className="p-1.5 sm:p-2 bg-green-50 hover:bg-green-100 text-green-600 rounded-lg transition-colors flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center"
+                            className="p-1.5 sm:p-2 bg-green-50 hover:bg-green-100 text-green-600 rounded-lg transition-colors shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center"
                             title="Edit"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteClick(company)}
-                            className="p-1.5 sm:p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center"
+                            className="p-1.5 sm:p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center"
                             title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -563,7 +563,7 @@ const CompanyPage = () => {
             )}
 
             {/* Pagination */}
-            <div className="px-4 sm:px-7 py-3 sm:py-5 border-t border-gray-200 bg-gradient-to-r from-gray-50/50 to-transparent">
+            <div className="px-4 sm:px-7 py-3 sm:py-5 border-t border-gray-200 bg-linear-to-r from-gray-50/50 to-transparent">
               <div className="flex flex-col xs:flex-row justify-between items-center gap-4">
                 <div className="text-xs sm:text-sm text-gray-700 order-3 xs:order-1">
                   Showing <span className="font-semibold text-gray-900">{companies.length}</span> of{' '}
@@ -574,14 +574,14 @@ const CompanyPage = () => {
                   <button
                     onClick={() => goToPage(1)}
                     disabled={currentPage === 1}
-                    className="p-2 sm:p-3 rounded-xl border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50/50 transition-colors flex-shrink-0"
+                    className="p-2 sm:p-3 rounded-xl border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50/50 transition-colors shrink-0"
                   >
                     <ChevronsLeft className="w-4 h-4" />
                   </button>
                   <button
                     onClick={handlePrevPage}
                     disabled={currentPage === 1}
-                    className="p-2 sm:p-3 rounded-xl border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50/50 transition-colors flex-shrink-0"
+                    className="p-2 sm:p-3 rounded-xl border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50/50 transition-colors shrink-0"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -604,7 +604,7 @@ const CompanyPage = () => {
                           key={pageNum}
                           onClick={() => goToPage(pageNum)}
                           className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl border transition-all text-sm flex items-center justify-center ${currentPage === pageNum
-                            ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-600 shadow-md'
+                            ? 'bg-linear-to-r from-blue-600 to-blue-700 text-white border-blue-600 shadow-md'
                             : 'border-gray-300 hover:bg-gray-50/50'
                             }`}
                         >
@@ -617,14 +617,14 @@ const CompanyPage = () => {
                   <button
                     onClick={handleNextPage}
                     disabled={currentPage === totalPages}
-                    className="p-2 sm:p-3 rounded-xl border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50/50 transition-colors flex-shrink-0"
+                    className="p-2 sm:p-3 rounded-xl border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50/50 transition-colors shrink-0"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => goToPage(totalPages)}
                     disabled={currentPage === totalPages}
-                    className="p-2 sm:p-3 rounded-xl border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50/50 transition-colors flex-shrink-0"
+                    className="p-2 sm:p-3 rounded-xl border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50/50 transition-colors shrink-0"
                   >
                     <ChevronsRight className="w-4 h-4" />
                   </button>

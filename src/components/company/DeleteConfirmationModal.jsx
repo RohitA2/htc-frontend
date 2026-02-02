@@ -5,12 +5,12 @@ import { AlertTriangle, X, Trash2, AlertCircle } from 'lucide-react';
 const DeleteConfirmationModal = ({ company, onClose, onConfirm, isBulkDelete }) => {
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-scale-in">
+      <div className="bg-linear-to-br from-white to-gray-50 rounded-2xl shadow-2xl max-w-md w-full transform transition-all animate-scale-in">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-red-100 to-red-50 rounded-xl">
+              <div className="p-3 bg-linear-to-br from-red-100 to-red-50 rounded-xl">
                 <AlertTriangle className="w-6 h-6 text-red-600" />
               </div>
               <div>
@@ -29,9 +29,9 @@ const DeleteConfirmationModal = ({ company, onClose, onConfirm, isBulkDelete }) 
           </div>
 
           {/* Warning Message */}
-          <div className="bg-gradient-to-r from-red-50/50 to-orange-50/50 border border-red-100 rounded-xl p-4 mb-6">
+          <div className="bg-linear-to-r from-red-50/50 to-orange-50/50 border border-red-100 rounded-xl p-4 mb-6">
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+              <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
               <div>
                 <p className="font-medium text-red-700">Warning: This action cannot be undone</p>
                 <p className="text-sm text-red-600 mt-1">
@@ -45,7 +45,7 @@ const DeleteConfirmationModal = ({ company, onClose, onConfirm, isBulkDelete }) 
           <div className="bg-gray-50/50 rounded-xl p-4 mb-8">
             {isBulkDelete ? (
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-100 to-red-50 rounded-full mb-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-red-100 to-red-50 rounded-full mb-4">
                   <Trash2 className="w-8 h-8 text-red-600" />
                 </div>
                 <p className="text-gray-900 font-semibold text-lg">
@@ -88,7 +88,7 @@ const DeleteConfirmationModal = ({ company, onClose, onConfirm, isBulkDelete }) 
             </button>
             <button
               onClick={onConfirm}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-3 bg-linear-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium flex items-center justify-center gap-2"
             >
               <Trash2 className="w-4 h-4" />
               {isBulkDelete ? 'Delete All' : 'Delete Company'}

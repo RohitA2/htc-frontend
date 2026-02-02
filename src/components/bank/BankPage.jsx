@@ -52,7 +52,7 @@ const BankPage = () => {
     const [bankToDelete, setBankToDelete] = useState(null);
     const [editingBank, setEditingBank] = useState(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
-    
+
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
     // Fetch banks with pagination
@@ -618,7 +618,7 @@ const BankPage = () => {
                                     Showing <span className="font-semibold text-gray-900">{banks.length}</span> of{' '}
                                     <span className="font-semibold text-gray-900">{totalCount}</span> accounts
                                 </div>
-                                
+
                                 <div className="flex items-center gap-1 sm:gap-1.5 order-2 sm:order-2 flex-wrap justify-center">
                                     <button
                                         onClick={() => goToPage(1)}

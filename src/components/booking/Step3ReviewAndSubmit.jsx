@@ -221,27 +221,6 @@ const Step3ReviewAndSubmit = ({ formData, calculations = {} }) => {
             </div>
           </div>
 
-          {/* Net Summary */}
-          {/* <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-5 rounded-lg border border-green-200 dark:border-green-800">
-            <h4 className="text-lg font-semibold mb-4 text-green-800 dark:text-green-300">Net Summary</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Total Receivable:</span>
-                <strong className="text-blue-700 dark:text-blue-300">₹{safeFixed(partyReceivable)}</strong>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Total Payable:</span>
-                <strong className="text-red-700 dark:text-red-300">₹{safeFixed(truckPayable)}</strong>
-              </div>
-              <div className="border-t border-green-300 dark:border-green-700 pt-2 flex justify-between text-lg font-bold">
-                <span>Net Balance:</span>
-                <span className={`${netBalance >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                  ₹{safeFixed(netBalance)}
-                </span>
-              </div>
-            </div>
-          </div> */}
-
           {/* Remarks */}
           {(formData.commissionRemark || formData.diffRemark) && (
             <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
