@@ -608,7 +608,7 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Truck Number *</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Truck Tyres *</label>
                         <input
                             type="text"
                             name="tyreCount"

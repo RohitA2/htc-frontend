@@ -15,8 +15,16 @@ import {
     Contact,
     Users,
     ChevronRight,
-    IndianRupee
+    IndianRupee,
+    NotebookPen,
+    BookOpenText,
+    Library,
+    ArrowRightLeft
 } from 'lucide-react';
+import { GiWallet } from "react-icons/gi";
+import { FaMoneyBillTransfer } from "react-icons/fa6";
+import { BsCurrencyRupee } from "react-icons/bs";
+import { FaTruckFast } from "react-icons/fa6";
 
 const menuGroups = [
     {
@@ -24,59 +32,68 @@ const menuGroups = [
             { icon: Search, label: 'Search', to: '/' },
             { icon: Building2, label: 'Company', to: '/company' },
             { icon: Landmark, label: "Bank's", to: '/bank' },
-            { icon: Calendar, label: 'Booking Register', to: '/booking' },
+            { icon: BookOpenText, label: 'Booking', to: '/booking' },
             // { icon: Receipt, label: 'Bilty register', to: '/bilty-register' },
-            { icon: Receipt, label: 'Challan Register', to: '/challan' },
+            { icon: NotebookPen, label: 'Challan', to: '/challan' },
             {
-                icon: IndianRupee, label: 'Payments',
+                icon: BsCurrencyRupee, label: 'Payments',
                 children: [
                     { label: 'Party', to: '/party-payments' },
                     { label: 'Vendor', to: '/vendor-payments' },
                 ],
             },
-            { icon: TrendingUp, label: 'Pending Banking Register', to: '/pending-banking-register' },
-            { icon: CreditCard, label: 'Create Multi Payment', to: '/create-multi-payment' },
-            { icon: Receipt, label: 'Multi Payment Register', to: '/multi-paymen-register' },
+            {
+                icon: FaMoneyBillTransfer,
+                label: 'Transactions',
+                children: [
+                    { label: 'Party', to: '/party-transactions' },
+                    { label: 'Vendor', to: '/vendor-transactions' },
+                ],
+            },
+            {
+                icon: GiWallet,
+                label: 'Accounts',
+                children: [
+                    { label: 'Day Book', to: '/daybook' },
+                    { label: 'Trail Balance', to: '/trail-balance' },
+                    { label: 'Balance Sheet', to: '/balance-sheet' },
+                ],
+            },
+            // { icon: Library, label: 'Day Book', to: '/daybook' },
+            // { icon: CreditCard, label: 'Create Multi Payment', to: '/create-multi-payment' },
+            // { icon: Receipt, label: 'Multi Payment Register', to: '/multi-paymen-register' },
             { icon: Truck, label: 'STC Truck', to: '/STC-Truck' },
             { icon: Package, label: 'STC Commodity', to: '/STC-Commodity' },
-            { icon: Shredder, label: 'Pending Commission', to: '/pending-commission' },
-            { icon: Shredder, label: 'Pending Difference', to: '/pending-difference' },
-            { icon: Shredder, label: 'Pending invoice', to: '/pending-invoice' },
-            { icon: Shredder, label: 'Invoice Register', to: '/invoice-register' },
-            { icon: Truck, label: 'Transporters', to: '/transporters' },
-            {
-                icon: Wallet,
-                label: 'Commision',
-                children: [
-                    { label: 'Cash Register', to: '/cashVoucher' },
-                    { label: 'Bank Register', to: '/bankVoucher' },
-                ],
-            },
-            {
-                icon: Wallet,
-                label: 'Diffrence',
-                children: [
-                    { label: 'Cash Register', to: '/cashDiffrenceVoucher' },
-                    { label: 'Bank Register', to: '/bankDiffrenceVoucher' },
-                ],
-            },
-            {
-                icon: Wallet,
-                label: 'Commission & Difference',
-                children: [
-                    { label: 'Cash or Bank', to: '/commisionDifferenceLedger' },
-                ],
-            },
-            {
-                icon: Wallet,
-                label: 'Party & Vendor',
-                children: [
-                    { label: 'Cash or Bank', to: '/bankPartyLedger' },
-                ],
-            },
-
-            { icon: Contact, label: 'Contact register', to: '/contact-register' },
-            { icon: Users, label: 'User', to: '/user-register' },
+            // { icon: Shredder, label: 'Pending Commission', to: '/pending-commission' },
+            // { icon: Shredder, label: 'Pending Difference', to: '/pending-difference' },
+            // { icon: Shredder, label: 'Pending invoice', to: '/pending-invoice' },
+            // { icon: Shredder, label: 'Invoice Register', to: '/invoice-register' },
+            { icon: FaTruckFast, label: 'Transporters', to: '/transporters' },
+            // {
+            //     icon: Wallet,
+            //     label: 'Commision',
+            //     children: [
+            //         { label: 'Cash Register', to: '/cashVoucher' },
+            //         { label: 'Bank Register', to: '/bankVoucher' },
+            //     ],
+            // },
+            // {
+            //     icon: Wallet,
+            //     label: 'Diffrence',
+            //     children: [
+            //         { label: 'Cash Register', to: '/cashDiffrenceVoucher' },
+            //         { label: 'Bank Register', to: '/bankDiffrenceVoucher' },
+            //     ],
+            // },
+            // {
+            //     icon: Wallet,
+            //     label: 'Commission & Difference',
+            //     children: [
+            //         { label: 'Cash or Bank', to: '/commisionDifferenceLedger' },
+            //     ],
+            // },
+            // { icon: Contact, label: 'Contact register', to: '/contact-register' },
+            // { icon: Users, label: 'User', to: '/user-register' },
         ],
     },
 ];
