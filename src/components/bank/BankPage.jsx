@@ -258,12 +258,12 @@ const BankPage = () => {
     const StatusBadge = ({ status }) => {
         const statusConfig = {
             Active: {
-                bg: 'bg-gradient-to-r from-green-100 to-green-50',
+                bg: 'bg-linear-to-r from-green-100 to-green-50',
                 text: 'text-green-800',
                 icon: <CheckCircle className="w-3 h-3" />
             },
             Inactive: {
-                bg: 'bg-gradient-to-r from-red-100 to-red-50',
+                bg: 'bg-linear-to-r from-red-100 to-red-50',
                 text: 'text-red-800',
                 icon: <XCircle className="w-3 h-3" />
             }
@@ -278,7 +278,7 @@ const BankPage = () => {
     };
 
     const PrimaryBadge = () => (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-yellow-100 to-yellow-50 text-yellow-800 border border-yellow-200">
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-linear-to-r from-yellow-100 to-yellow-50 text-yellow-800 border border-yellow-200">
             <Star className="w-3 h-3 fill-yellow-400" />
             <span className="ml-1">Primary</span>
         </span>
@@ -303,7 +303,7 @@ const BankPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/20 p-2 sm:p-4 md:p-6 lg:p-12">
+        <div className="min-h-screen bg-linear-to-br from-gray-50 to-blue-50/20 p-2 sm:p-4 md:p-6 lg:p-12">
             {/* Header */}
             <div className="mb-6 sm:mb-8">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4">
@@ -322,7 +322,7 @@ const BankPage = () => {
                         </button>
                         <button
                             onClick={handleAddBank}
-                            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-xs sm:text-sm"
+                            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg text-xs sm:text-sm"
                         >
                             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                             <span className=" xs:inline">Add Bank</span>
@@ -333,18 +333,18 @@ const BankPage = () => {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
-                <div className="bg-gradient-to-br from-white to-blue-50/50 rounded-xl shadow-sm sm:shadow-md p-3 sm:p-4 md:p-5 border border-blue-100">
+                <div className="bg-linear-to-br from-white to-blue-50/50 rounded-xl shadow-sm sm:shadow-md p-3 sm:p-4 md:p-5 border border-blue-100">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-xs sm:text-sm text-gray-600 font-medium">Total Accounts</p>
                             <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mt-1">{totalCount}</p>
                         </div>
-                        <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50">
+                        <div className="p-2 sm:p-3 rounded-xl bg-linear-to-br from-blue-100 to-blue-50">
                             <BanknoteIcon className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-blue-600" />
                         </div>
                     </div>
                 </div>
-                <div className="bg-gradient-to-br from-white to-green-50/50 rounded-xl shadow-sm sm:shadow-md p-3 sm:p-4 md:p-5 border border-green-100">
+                <div className="bg-linear-to-br from-white to-green-50/50 rounded-xl shadow-sm sm:shadow-md p-3 sm:p-4 md:p-5 border border-green-100">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-xs sm:text-sm text-gray-600 font-medium">Active</p>
@@ -352,12 +352,12 @@ const BankPage = () => {
                                 {banks.filter(b => b.status === 'Active').length}
                             </p>
                         </div>
-                        <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-green-100 to-green-50">
+                        <div className="p-2 sm:p-3 rounded-xl bg-linear-to-br from-green-100 to-green-50">
                             <Shield className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-green-600" />
                         </div>
                     </div>
                 </div>
-                <div className="bg-gradient-to-br from-white to-yellow-50/50 rounded-xl shadow-sm sm:shadow-md p-3 sm:p-4 md:p-5 border border-yellow-100">
+                <div className="bg-linear-to-br from-white to-yellow-50/50 rounded-xl shadow-sm sm:shadow-md p-3 sm:p-4 md:p-5 border border-yellow-100">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-xs sm:text-sm text-gray-600 font-medium">Primary</p>
@@ -365,18 +365,18 @@ const BankPage = () => {
                                 {banks.filter(b => b.isPrimary).length}
                             </p>
                         </div>
-                        <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-yellow-100 to-yellow-50">
+                        <div className="p-2 sm:p-3 rounded-xl bg-linear-to-br from-yellow-100 to-yellow-50">
                             <Star className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-yellow-600 fill-yellow-400" />
                         </div>
                     </div>
                 </div>
-                <div className="bg-gradient-to-br from-white to-purple-50/50 rounded-xl shadow-sm sm:shadow-md p-3 sm:p-4 md:p-5 border border-purple-100">
+                <div className="bg-linear-to-br from-white to-purple-50/50 rounded-xl shadow-sm sm:shadow-md p-3 sm:p-4 md:p-5 border border-purple-100">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-xs sm:text-sm text-gray-600 font-medium">Selected</p>
                             <p className="text-xl sm:text-2xl md:text-3xl font-bold text-purple-600 mt-1">{selectedBanks.length}</p>
                         </div>
-                        <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-purple-100 to-purple-50">
+                        <div className="p-2 sm:p-3 rounded-xl bg-linear-to-br from-purple-100 to-purple-50">
                             <Users className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-purple-600" />
                         </div>
                     </div>
@@ -384,7 +384,7 @@ const BankPage = () => {
             </div>
 
             {/* Search and Action Bar */}
-            <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-xl shadow-md mb-6 sm:mb-8 border border-blue-100 overflow-hidden">
+            <div className="bg-linear-to-br from-white to-blue-50/30 rounded-xl shadow-md mb-6 sm:mb-8 border border-blue-100 overflow-hidden">
                 <div className="p-3 sm:p-5 border-b border-blue-100">
                     <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-5">
                         <div className="relative flex-1 w-full min-w-0">
@@ -400,29 +400,29 @@ const BankPage = () => {
                         <div className="flex flex-wrap gap-2 sm:gap-3 w-full lg:w-auto lg:flex-none">
                             <button
                                 onClick={() => setShowFilters(!showFilters)}
-                                className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 border border-blue-200 rounded-xl hover:bg-blue-50/50 transition-all text-xs sm:text-sm flex-1 sm:flex-none min-w-[44px]"
+                                className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 border border-blue-200 rounded-xl hover:bg-blue-50/50 transition-all text-xs sm:text-sm flex-1 sm:flex-none min-w-11"
                             >
-                                <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                                <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                                 <span className="hidden sm:inline">Filters</span>
                                 {Object.values(filters).some(val => val) && (
-                                    <span className="bg-blue-500 text-white text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center animate-pulse ml-1 sm:ml-2 flex-shrink-0">
+                                    <span className="bg-blue-500 text-white text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center animate-pulse ml-1 sm:ml-2 shrink-0">
                                         !
                                     </span>
                                 )}
                             </button>
                             <button
                                 onClick={() => setShowExport(true)}
-                                className="flex items-center gap-1.5 px-3 sm:px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg text-xs sm:text-sm flex-1 sm:flex-none min-w-[44px]"
+                                className="flex items-center gap-1.5 px-3 sm:px-5 py-2.5 bg-linear-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg text-xs sm:text-sm flex-1 sm:flex-none min-w-11"
                             >
-                                <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                                <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                                 <span className="hidden sm:inline">Export</span>
                             </button>
                             {selectedBanks.length > 0 && (
                                 <button
                                     onClick={handleBulkDelete}
-                                    className="flex items-center gap-1.5 px-3 sm:px-5 py-2.5 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-xl hover:from-red-600 hover:to-rose-700 transition-all shadow-md hover:shadow-lg text-xs sm:text-sm flex-1 sm:flex-none"
+                                    className="flex items-center gap-1.5 px-3 sm:px-5 py-2.5 bg-linear-to-r from-red-500 to-rose-600 text-white rounded-xl hover:from-red-600 hover:to-rose-700 transition-all shadow-md hover:shadow-lg text-xs sm:text-sm flex-1 sm:flex-none"
                                 >
-                                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                                     <span className="hidden xs:inline">Delete ({selectedBanks.length})</span>
                                 </button>
                             )}
@@ -431,7 +431,7 @@ const BankPage = () => {
                 </div>
                 {/* Filters Panel */}
                 {showFilters && (
-                    <div className="p-3 sm:p-5 border-t border-blue-100 bg-gradient-to-br from-blue-50/50 to-white/50">
+                    <div className="p-3 sm:p-5 border-t border-blue-100 bg-linear-to-br from-blue-50/50 to-white/50">
                         <BankFilter
                             filters={filters}
                             companies={companies}
@@ -443,7 +443,7 @@ const BankPage = () => {
             </div>
 
             {/* Enhanced Scrollable Banks Table */}
-            <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-xl shadow-md overflow-hidden border border-blue-100 max-h-[70vh] sm:max-h-[75vh]">
+            <div className="bg-linear-to-br from-white to-blue-50/30 rounded-xl shadow-md overflow-hidden border border-blue-100 max-h-[70vh] sm:max-h-[75vh]">
                 {loading ? (
                     <div className="p-8 sm:p-12 text-center">
                         <div className="inline-block animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-[3px] border-blue-500 border-t-transparent mx-auto"></div>
@@ -457,7 +457,7 @@ const BankPage = () => {
                         <p className="text-red-600 text-sm sm:text-lg mb-4">Error: {error}</p>
                         <button
                             onClick={() => fetchBanks(currentPage, searchTerm, filters)}
-                            className="px-5 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-md text-sm"
+                            className="px-5 sm:px-6 py-2.5 sm:py-3 bg-linear-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-md text-sm"
                         >
                             Retry
                         </button>
@@ -465,8 +465,8 @@ const BankPage = () => {
                 ) : (
                     <>
                         <div className="overflow-auto max-h-[calc(70vh-140px)] sm:max-h-[calc(75vh-160px)] scrollbar-thin scrollbar-thumb-blue-300 scrollbar-track-blue-100 hover:scrollbar-thumb-blue-400">
-                            <table className="min-w-[900px] sm:min-w-full w-full divide-y divide-blue-100 table-fixed">
-                                <thead className="bg-gradient-to-r from-blue-50 to-blue-100/50 sticky top-0 z-10">
+                            <table className="min-w-225 sm:min-w-full w-full divide-y divide-blue-100 table-fixed">
+                                <thead className="bg-linear-to-r from-blue-50 to-blue-100/50 sticky top-0 z-10">
                                     <tr>
                                         <th className="w-12 px-2 sm:px-4 py-2.5 sm:py-3 text-left text-xs font-semibold text-blue-800 uppercase tracking-wider">
                                             <input
@@ -500,7 +500,7 @@ const BankPage = () => {
                                     {banks.map((bank) => (
                                         <tr
                                             key={bank.id}
-                                            className={`hover:bg-gradient-to-r hover:from-blue-50/70 hover:to-transparent transition-all duration-200 ${bank.isPrimary ? 'bg-gradient-to-r from-yellow-50/40 to-transparent border-l-4 border-yellow-400' : ''
+                                            className={`hover:bg-linear-to-r hover:from-blue-50/70 hover:to-transparent transition-all duration-200 ${bank.isPrimary ? 'bg-linear-to-r from-yellow-50/40 to-transparent border-l-4 border-yellow-400' : ''
                                                 }`}
                                         >
                                             <td className="px-2 sm:px-4 py-2.5 sm:py-3 whitespace-nowrap w-12">
@@ -516,7 +516,7 @@ const BankPage = () => {
                                                     <div className="font-semibold text-gray-900 text-xs sm:text-sm flex items-center gap-1.5">
                                                         {bank.acHolderName}
                                                         {bank.isPrimary && (
-                                                            <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 fill-yellow-400 flex-shrink-0" />
+                                                            <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 fill-yellow-400 shrink-0" />
                                                         )}
                                                     </div>
                                                     <div className="text-xs text-gray-600 font-mono">
@@ -532,7 +532,7 @@ const BankPage = () => {
                                             </td>
                                             <td className="px-2 sm:px-4 py-2.5 sm:py-3 w-24 sm:w-28">
                                                 <div className="flex items-center gap-1.5 sm:gap-2 truncate">
-                                                    <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                                                    <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg shrink-0">
                                                         <Building className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
                                                     </div>
                                                     <span className="text-xs sm:text-sm font-medium text-gray-900 truncate" title={getCompanyName(bank.companyId)}>
@@ -555,21 +555,21 @@ const BankPage = () => {
                                                 <div className="flex items-center gap-1 sm:gap-1.5">
                                                     <button
                                                         onClick={() => handleViewBank(bank)}
-                                                        className="p-1.5 sm:p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-all flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9"
+                                                        className="p-1.5 sm:p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-all shrink-0 w-8 h-8 sm:w-9 sm:h-9"
                                                         title="View"
                                                     >
                                                         <Eye className="w-3 h-3 sm:w-4 sm:h-4 m-auto" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleEditBank(bank)}
-                                                        className="p-1.5 sm:p-2 bg-green-50 hover:bg-green-100 text-green-600 rounded-lg transition-all flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9"
+                                                        className="p-1.5 sm:p-2 bg-green-50 hover:bg-green-100 text-green-600 rounded-lg transition-all shrink-0 w-8 h-8 sm:w-9 sm:h-9"
                                                         title="Edit"
                                                     >
                                                         <Edit className="w-3 h-3 sm:w-4 sm:h-4 m-auto" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleTogglePrimary(bank)}
-                                                        className={`p-1.5 sm:p-2 rounded-lg transition-all flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center ${bank.isPrimary
+                                                        className={`p-1.5 sm:p-2 rounded-lg transition-all shrink-0 w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center ${bank.isPrimary
                                                             ? 'bg-yellow-50 text-yellow-600 cursor-default'
                                                             : 'bg-purple-50 hover:bg-purple-100 text-purple-600'
                                                             }`}
@@ -580,7 +580,7 @@ const BankPage = () => {
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeleteClick(bank)}
-                                                        className="p-1.5 sm:p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-all flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9"
+                                                        className="p-1.5 sm:p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-all shrink-0 w-8 h-8 sm:w-9 sm:h-9"
                                                         title="Delete"
                                                     >
                                                         <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 m-auto" />
@@ -612,7 +612,7 @@ const BankPage = () => {
                         )}
 
                         {/* Enhanced Pagination */}
-                        <div className="px-3 sm:px-6 lg:px-7 py-3 sm:py-4 md:py-5 border-t border-blue-100 bg-gradient-to-r from-blue-50/70 to-transparent">
+                        <div className="px-3 sm:px-6 lg:px-7 py-3 sm:py-4 md:py-5 border-t border-blue-100 bg-linear-to-r from-blue-50/70 to-transparent">
                             <div className="flex flex-col xs:flex-row sm:flex-col md:flex-row justify-between items-center gap-3 sm:gap-4">
                                 <div className="text-xs sm:text-sm text-gray-700 text-center sm:text-left order-3 sm:order-1">
                                     Showing <span className="font-semibold text-gray-900">{banks.length}</span> of{' '}
@@ -623,14 +623,14 @@ const BankPage = () => {
                                     <button
                                         onClick={() => goToPage(1)}
                                         disabled={currentPage === 1}
-                                        className="p-1.5 sm:p-2 md:p-3 rounded-lg border border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50/70 transition-all flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11"
+                                        className="p-1.5 sm:p-2 md:p-3 rounded-lg border border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50/70 transition-all shrink-0 w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11"
                                     >
                                         <ChevronsLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 m-auto" />
                                     </button>
                                     <button
                                         onClick={handlePrevPage}
                                         disabled={currentPage === 1}
-                                        className="p-1.5 sm:p-2 md:p-3 rounded-lg border border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50/70 transition-all flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11"
+                                        className="p-1.5 sm:p-2 md:p-3 rounded-lg border border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50/70 transition-all shrink-0 w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11"
                                     >
                                         <ChevronLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 m-auto" />
                                     </button>
@@ -652,7 +652,7 @@ const BankPage = () => {
                                                     key={pageNum}
                                                     onClick={() => goToPage(pageNum)}
                                                     className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-lg border transition-all text-xs font-medium flex items-center justify-center min-w-0 ${currentPage === pageNum
-                                                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-600 shadow-sm'
+                                                        ? 'bg-linear-to-r from-blue-600 to-blue-700 text-white border-blue-600 shadow-sm'
                                                         : 'border-blue-300 hover:bg-blue-50/70 hover:border-blue-400'
                                                         }`}
                                                 >
@@ -665,14 +665,14 @@ const BankPage = () => {
                                     <button
                                         onClick={handleNextPage}
                                         disabled={currentPage === totalPages}
-                                        className="p-1.5 sm:p-2 md:p-3 rounded-lg border border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50/70 transition-all flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11"
+                                        className="p-1.5 sm:p-2 md:p-3 rounded-lg border border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50/70 transition-all shrink-0 w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11"
                                     >
                                         <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 m-auto" />
                                     </button>
                                     <button
                                         onClick={() => goToPage(totalPages)}
                                         disabled={currentPage === totalPages}
-                                        className="p-1.5 sm:p-2 md:p-3 rounded-lg border border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50/70 transition-all flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11"
+                                        className="p-1.5 sm:p-2 md:p-3 rounded-lg border border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50/70 transition-all shrink-0 w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11"
                                     >
                                         <ChevronsRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 m-auto" />
                                     </button>

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { X } from 'lucide-react';
 import Step1BookingAndTruck from './Step1BookingAndTruck';
 import Step2FinancialDetails from './Step2FinancialDetails';
 import Step3ReviewAndSubmit from './Step3ReviewAndSubmit';
@@ -36,6 +35,11 @@ const calculateAll = (formData) => {
     const advanceFromParty = Number(formData.initialPaymentFromParty) || 0;
     const advanceToTruck = Number(formData.initialPaymentToTruck) || 0;
 
+    // Halting charges calculation - make sure we access the nested object
+    const haltingCharges = Number(formData.haltingDetails?.haltingCharges) || 0;
+    const haltingPaidAmount = Number(formData.haltingDetails?.haltingPaidAmount) || 0;
+    const haltingPending = haltingCharges - haltingPaidAmount;
+
     // Correct commission logic
     let partyNet = partyFreight + differenceAmount;
     if (formData.commissionType !== 'truck') {
@@ -47,6 +51,9 @@ const calculateAll = (formData) => {
         truckNet -= commissionAmount;
     }
 
+    // Add halting charges to truck payment if applicable
+    truckNet += haltingCharges;
+
     return {
         partyFreight,
         truckFreight,
@@ -57,6 +64,9 @@ const calculateAll = (formData) => {
         partyPending: partyNet - advanceFromParty,
         truckPending: truckNet - advanceToTruck,
         rawDifference,
+        haltingCharges,
+        haltingPaidAmount,
+        haltingPending,
     };
 };
 
@@ -102,6 +112,24 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
         initialPaymentToTruck: '',
         initialPaymentFromParty: '',
 
+        // Initial Payment Bank Details
+        partyPaymentMode: '',
+        partyBankName: '',
+        partyAccountNo: '',
+        partyIfscCode: '',
+        partyBranchName: '',
+        partyUtrNo: '',
+        partyPaymentDate: '',
+
+        truckPaymentMode: '',
+        truckBankName: '',
+        truckAccountNo: '',
+        truckIfscCode: '',
+        truckBranchName: '',
+        truckUtrNo: '',
+        truckPanNumber: '',
+        truckPaymentDate: '',
+
         commissionGivenDate: '',
         commissionPaymentMode: '',
         commissionPaymentType: '',
@@ -113,17 +141,26 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
         differencePaymentType: '',
         differenceBankAccountNo: '',
         differenceUtrNo: '',
+
         haltingDetails: {
+            haltingDate: '',
             arrivalTime: '',
             unloadingStartTime: '',
             unloadingEndTime: '',
-            estimatedHours: '', // New field for initial booking
+            estimatedHours: '',
             haltingReason: '',
             haltingCharges: '',
+            pricePerDay: '',
+            haltingDays: '',
             haltingPaymentStatus: 'pending',
             haltingPaymentMode: '',
             haltingPaidAmount: '',
-            haltingRemark: ''
+            haltingRemark: '',
+            haltingBankName: '',
+            haltingAccountNo: '',
+            haltingIfscCode: '',
+            haltingBranchName: '',
+            haltingUtrNo: '',
         },
     });
 
@@ -137,6 +174,9 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
         partyPending: 0,
         truckPending: 0,
         rawDifference: 0,
+        haltingCharges: 0,
+        haltingPaidAmount: 0,
+        haltingPending: 0,
     });
 
     const steps = ['Booking & Truck Details', 'Financial Details', 'Review & Submit'];
@@ -151,14 +191,15 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
     const loadBookingData = (bookingData) => {
         // Extract commission data
         const commissionData = bookingData.commissions?.[0] || {};
-        const haltingData = bookingData.haltingDetails?.[0] || {};
+        const haltingData = bookingData.haltings?.[0] || {}; // Changed from haltingDetails to haltings
+        const partyPayment = bookingData.partyPayments?.[0] || {};
+        const truckPayment = bookingData.truckPayments?.[0] || {};
 
         // Calculate commission type
         let commissionType = '';
         if (commissionData.commissionType) {
             commissionType = commissionData.commissionType;
         } else if (bookingData.commissionAmount > 0) {
-            // Try to infer from commission amount
             commissionType = 'party';
         }
 
@@ -167,23 +208,23 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
             date: bookingData.date ? new Date(bookingData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             bookingType: bookingData.bookingType || 'commission only',
             companyId: bookingData.companyId || '',
-            partyName: bookingData.Party?.partyName || '',
-            partyPhone: bookingData.Party?.partyPhone || '',
-            partyAddress: bookingData.Party?.partyAddress || '',
+            partyName: bookingData.party?.partyName || '', // Changed from Party to party
+            partyPhone: bookingData.party?.partyPhone || '',
+            partyAddress: bookingData.party?.partyAddress || '',
             commodity: bookingData.commodity || '',
             rate: bookingData.rate || '',
             weight: bookingData.weight || '',
             weightType: bookingData.weightType || 'kg',
             fromLocation: bookingData.fromLocation || '',
             toLocation: bookingData.toLocation || '',
-            truckNo: bookingData.Truck?.truckNo || '',
-            tyreCount: bookingData.Truck?.tyreCount || '',
-            driverName: bookingData.Truck?.driverName || '',
-            driverPhone: bookingData.Truck?.driverPhone || '',
-            transporterName: bookingData.Truck?.transporterName || '',
-            transporterPhone: bookingData.Truck?.transporterPhone || '',
+            truckNo: bookingData.truck?.truckNo || '', // Changed from Truck to truck
+            tyreCount: bookingData.truck?.tyreCount || '',
+            driverName: bookingData.truck?.driverName || '',
+            driverPhone: bookingData.truck?.driverPhone || '',
+            transporterName: bookingData.truck?.transporterName || '',
+            transporterPhone: bookingData.truck?.transporterPhone || '',
             truckRate: bookingData.truckRate || '',
-            truckWeight: bookingData.weight || '', // Using same weight as party weight
+            truckWeight: bookingData.weight || '',
             truckWeightType: bookingData.weightType || 'kg',
 
             commissionPercentage: '',
@@ -197,7 +238,25 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
             initialPaymentToTruck: bookingData.truckPayments?.[0]?.amount || '',
             initialPaymentFromParty: bookingData.partyPayments?.[0]?.amount || '',
 
-            commissionGivenDate: commissionData.paymentDate || '',
+            // Initial Payment Bank Details
+            partyPaymentMode: partyPayment.paymentMode || '',
+            partyBankName: partyPayment.bankName || '',
+            partyAccountNo: partyPayment.bankAccountNo || '', // Changed from accountNo to bankAccountNo
+            partyIfscCode: partyPayment.ifscCode || '',
+            partyBranchName: partyPayment.branchName || '',
+            partyUtrNo: partyPayment.utrNo || '',
+            partyPaymentDate: partyPayment.paymentDate ? new Date(partyPayment.paymentDate).toISOString().split('T')[0] : '',
+
+            truckPaymentMode: truckPayment.paymentMode || '',
+            truckBankName: truckPayment.bankName || '',
+            truckAccountNo: truckPayment.accountNo || '',
+            truckIfscCode: truckPayment.ifscCode || '',
+            truckBranchName: truckPayment.branchName || '',
+            truckUtrNo: truckPayment.utrNo || '',
+            truckPanNumber: truckPayment.panNumber || '',
+            truckPaymentDate: truckPayment.paymentDate ? new Date(truckPayment.paymentDate).toISOString().split('T')[0] : '',
+
+            commissionGivenDate: commissionData.paymentDate ? new Date(commissionData.paymentDate).toISOString().split('T')[0] : '',
             commissionPaymentMode: commissionData.paymentMode || '',
             commissionPaymentType: commissionData.paymentType || '',
             commissionBankAccountNo: commissionData.bankAccountNo || '',
@@ -209,16 +268,24 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
             differenceBankAccountNo: '',
             differenceUtrNo: '',
             haltingDetails: {
+                haltingDate: haltingData.haltingDate || '',
                 arrivalTime: haltingData.arrivalTime || '',
                 unloadingStartTime: haltingData.unloadingStartTime || '',
                 unloadingEndTime: haltingData.unloadingEndTime || '',
-                estimatedHours: haltingData.estimatedHours || '', // Load estimated hours
-                haltingReason: haltingData.haltingReason || '',
-                haltingCharges: haltingData.haltingCharges || '',
-                haltingPaymentStatus: haltingData.haltingPaymentStatus || 'pending',
-                haltingPaymentMode: haltingData.haltingPaymentMode || '',
-                haltingPaidAmount: haltingData.haltingPaidAmount || '',
-                haltingRemark: haltingData.haltingRemark || ''
+                estimatedHours: haltingData.estimatedHours || '',
+                haltingReason: haltingData.reason || '', // Changed from haltingReason to reason
+                haltingCharges: haltingData.amount || '', // Changed from haltingCharges to amount
+                pricePerDay: haltingData.pricePerDay || '',
+                haltingDays: haltingData.days || '', // Changed from haltingDays to days
+                haltingPaymentStatus: haltingData.paymentStatus || 'pending', // Changed from haltingPaymentStatus to paymentStatus
+                haltingPaymentMode: haltingData.paymentMode || '',
+                haltingPaidAmount: haltingData.paidAmount || '',
+                haltingRemark: haltingData.remark || '',
+                haltingBankName: haltingData.bankName || '',
+                haltingAccountNo: haltingData.accountNo || '',
+                haltingIfscCode: haltingData.ifscCode || '',
+                haltingBranchName: haltingData.branchName || '',
+                haltingUtrNo: haltingData.utrNo || '',
             },
         };
 
@@ -234,26 +301,46 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
         setFormData(prev => {
             const newData = { ...prev, [name]: value };
 
+            // Handle nested halting details
+            if (name.startsWith('halting.')) {
+                const field = name.split('.')[1];
+                const updatedHalting = {
+                    ...prev.haltingDetails,
+                    [field]: value
+                };
+
+                // Auto-calculate halting charges when price per day or days change
+                if (field === 'pricePerDay' || field === 'haltingDays') {
+                    const pricePerDay = field === 'pricePerDay' ? value : prev.haltingDetails.pricePerDay;
+                    const haltingDays = field === 'haltingDays' ? value : prev.haltingDetails.haltingDays;
+
+                    if (pricePerDay && haltingDays) {
+                        const charges = Number(pricePerDay) * Number(haltingDays);
+                        updatedHalting.haltingCharges = charges.toString();
+                    }
+                }
+
+                newData.haltingDetails = updatedHalting;
+            }
+
             // Always recalculate when relevant fields change
             if ([
                 'rate', 'weight', 'truckRate', 'truckWeight',
                 'commissionPercentage', 'commissionAmount', 'truckCommissionAmount', 'commissionType',
-                'differenceAmount', 'initialPaymentFromParty', 'initialPaymentToTruck'
-            ].includes(name)) {
+                'differenceAmount', 'initialPaymentFromParty', 'initialPaymentToTruck',
+                'halting.haltingCharges', 'halting.haltingPaidAmount'
+            ].includes(name) || name.startsWith('halting.')) {
                 const newCalcs = calculateAll(newData);
                 setCalculations(newCalcs);
 
                 // AUTO-FILL LOGIC FOR COMMISSION
                 if (name === 'commissionType') {
                     if (value === 'truck' && newData.truckCommissionAmount) {
-                        // Auto-fill commission amount from truck commission
                         newData.commissionAmount = Number(newData.truckCommissionAmount).toFixed(2);
                     } else if (value === 'party' && newData.commissionPercentage && newData.rate && newData.weight) {
-                        // Auto-fill from percentage
                         const partyFreight = calculateFreight(newData.rate, newData.weight);
                         newData.commissionAmount = ((Number(newData.commissionPercentage) / 100) * partyFreight).toFixed(2);
                     } else if (!value || value === 'free') {
-                        // Clear commission if free or no type
                         newData.commissionAmount = '';
                     }
                 }
@@ -269,7 +356,7 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
                     newData.commissionAmount = ((Number(value) / 100) * partyFreight).toFixed(2);
                 }
 
-                // Auto-fill difference amount if not manually entered or when rates/weights change
+                // Auto-fill difference amount
                 if ((!newData.differenceAmount && name !== 'differenceAmount') ||
                     ['rate', 'weight', 'truckRate', 'truckWeight'].includes(name)) {
                     const partyFreight = calculateFreight(newData.rate, newData.weight);
@@ -286,32 +373,6 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
     const handleCalculate = () => {
         const newCalcs = calculateAll(formData);
         setCalculations(newCalcs);
-
-        // Auto-fill commissionAmount based on commission type
-        if (formData.commissionType === 'truck' && formData.truckCommissionAmount) {
-            setFormData(prev => ({
-                ...prev,
-                commissionAmount: Number(formData.truckCommissionAmount).toFixed(2)
-            }));
-        } else if (formData.commissionType === 'party' && formData.commissionPercentage && formData.rate && formData.weight) {
-            const partyFreight = calculateFreight(formData.rate, formData.weight);
-            const commissionAmount = (Number(formData.commissionPercentage) / 100) * partyFreight;
-            setFormData(prev => ({
-                ...prev,
-                commissionAmount: commissionAmount.toFixed(2)
-            }));
-        }
-
-        // Auto-fill difference amount
-        if (!formData.differenceAmount || formData.differenceAmount === "0.00") {
-            const partyFreight = calculateFreight(formData.rate, formData.weight);
-            const truckFreight = calculateFreight(formData.truckRate, formData.truckWeight);
-            const rawDifference = partyFreight - truckFreight;
-            setFormData(prev => ({
-                ...prev,
-                differenceAmount: rawDifference.toFixed(2)
-            }));
-        }
     };
 
     const handleNext = () => setActiveStep(prev => prev + 1);
@@ -359,23 +420,31 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
                 differencePaymentType: formData.differencePaymentType || null,
                 differenceBankAccountNo: formData.differenceBankAccountNo || null,
                 differenceUtrNo: formData.differenceUtrNo || null,
+
                 haltingDetails: [{
+                    haltingDate: formData.haltingDetails.haltingDate || null,
                     arrivalTime: formData.haltingDetails.arrivalTime || null,
                     unloadingStartTime: formData.haltingDetails.unloadingStartTime || null,
                     unloadingEndTime: formData.haltingDetails.unloadingEndTime || null,
-                    estimatedHours: Number(formData.haltingDetails.estimatedHours) || 0, // New field
+                    estimatedHours: Number(formData.haltingDetails.estimatedHours) || 0,
                     haltingReason: formData.haltingDetails.haltingReason || null,
                     haltingCharges: Number(formData.haltingDetails.haltingCharges) || 0,
+                    pricePerDay: Number(formData.haltingDetails.pricePerDay) || 0,
+                    haltingDays: Number(formData.haltingDetails.haltingDays) || 0,
                     haltingPaymentStatus: formData.haltingDetails.haltingPaymentStatus || 'pending',
                     haltingPaymentMode: formData.haltingDetails.haltingPaymentMode || null,
                     haltingPaidAmount: Number(formData.haltingDetails.haltingPaidAmount) || 0,
-                    haltingRemark: formData.haltingDetails.haltingRemark || null
+                    haltingRemark: formData.haltingDetails.haltingRemark || null,
+                    haltingBankName: formData.haltingDetails.haltingBankName || null,
+                    haltingAccountNo: formData.haltingDetails.haltingAccountNo || null,
+                    haltingIfscCode: formData.haltingDetails.haltingIfscCode || null,
+                    haltingBranchName: formData.haltingDetails.haltingBranchName || null,
+                    haltingUtrNo: formData.haltingDetails.haltingUtrNo || null,
                 }],
             };
 
             let response;
             if (isEditMode && booking) {
-                // Update existing booking
                 response = await axios.put(`${API_URL}/booking/update/${booking.id}`, payload, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -385,7 +454,6 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
                 toast.success('Booking updated successfully!');
                 setSuccess('Booking updated successfully!');
             } else {
-                // Create new booking
                 response = await axios.post(`${API_URL}/booking/create`, payload, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -396,12 +464,10 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
                 setSuccess('Booking created successfully!');
             }
 
-            // Call onSuccess prop to close modal and refresh list
             if (onSuccess) {
                 onSuccess();
             }
 
-            // Reset form if creating new booking
             if (!isEditMode) {
                 setTimeout(() => {
                     setFormData({
@@ -435,16 +501,6 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
                         diffRemark: '',
                         initialPaymentToTruck: '',
                         initialPaymentFromParty: '',
-                        commissionGivenDate: '',
-                        commissionPaymentMode: '',
-                        commissionPaymentType: '',
-                        commissionBankAccountNo: '',
-                        commissionUtrNo: '',
-                        differenceGivenDate: '',
-                        differencePaymentMode: '',
-                        differencePaymentType: '',
-                        differenceBankAccountNo: '',
-                        differenceUtrNo: '',
                     });
                     setCalculations({
                         partyFreight: 0,
@@ -494,7 +550,6 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
         }
     };
 
-    // Function to show confirmation before closing
     const showCloseConfirmation = () => {
         const hasChanges = activeStep > 0 || Object.values(formData).some(value => value !== '' && value !== null && value !== undefined);
         if (hasChanges) {
@@ -556,7 +611,7 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
                     </div>
                 </div>
 
-                {/* Form Content - Thin Scrollbar */}
+                {/* Form Content */}
                 <div className="p-6 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
                     {renderStep()}
                 </div>

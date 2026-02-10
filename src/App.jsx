@@ -59,13 +59,14 @@ const Profile = lazy(() => import('./components/pages/ProfilePage'));
 const ChangePassword = lazy(() => import('./components/pages/ChangePasswordPage'));
 const BookingList = lazy(() => import('./components/booking/BookingsListPage'));
 const ChallanList = lazy(() => import('./components/challan/ChallanList'));
-const PartyLedger = lazy(() => import('./components/partyLedger/PartyLedgerPage'))
-const VendorLedger = lazy(() => import('./components/vendorLedger/VendorLedgerPage'))
+const PartyLedger = lazy(() => import('./components/partyLedger/PartyPayments'));
+const VendorLedger = lazy(() => import('./components/vendorLedger/VendorPayments'));
 const PartyTransactions = lazy(() => import('./components/partyLedger/PartyTransactions'))
 const VendorTransactions = lazy(() => import('./components/vendorLedger/VendorTransactions'))
 const DayBook = lazy(() => import('./components/accounting/DayBook'));
 const TrailBalance = lazy(() => import('./components/accounting/TrailBalance'));
 const BalanceSheet = lazy(() => import('./components/accounting/BalanceSheet'));
+const CommissionLedger = lazy(() => import('./components/commission/CommissionLedger'));
 
 
 const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
@@ -112,6 +113,7 @@ const App = () => {
                 <Route path="/daybook" element={<DayBook />} />
                 <Route path="/trail-balance" element={<TrailBalance />} />
                 <Route path="/balance-sheet" element={<BalanceSheet />} />
+                <Route path="/commission-ledger" element={<CommissionLedger />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/change-password" element={<ChangePassword />} />
               </Route>

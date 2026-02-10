@@ -34,7 +34,7 @@ const { Option } = Select;
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
-    // console.log("i am booking", booking);
+    console.log("i am booking", booking);
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -55,6 +55,7 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
             isAdvanceRow: true,
             advancedMode: 'Received',
             advanced: '',
+            received: '',
             deduction: '',
             balance: '',
         }
@@ -136,6 +137,10 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
                             bookingSlipDate: moment(),
                             biltyDate: biltyData.biltyDate ? moment(biltyData.biltyDate) : moment(booking.date || Date.now()),
                             bookingSlipNo: booking.id,
+                            advanced: biltyData.advanced || 0,
+                            received: biltyData.received || 0,
+                            deduction: biltyData.deduction || 0,
+                            balance: biltyData.balance || 0,
                         });
 
                         if (biltyData.articles && biltyData.articles.length > 0) {
@@ -149,6 +154,7 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
                                     isAdvanceRow: true,
                                     advancedMode: 'Received',
                                     advanced: biltyData.advanced || 0,
+                                    received: biltyData.received || 0,
                                     deduction: biltyData.deduction || 0,
                                     balance: biltyData.balance || 0,
                                 }
@@ -239,6 +245,7 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
                                 isAdvanceRow: true,
                                 advancedMode: 'Received',
                                 advanced: totalAdvance || 0,
+                                received: 0,
                                 deduction: totalDeduction || 0,
                                 balance: calculatedBalance,
                             }
@@ -273,8 +280,9 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
                         weight: booking.weight || '',
                         rate: booking.rate || '',
                         totalFreightAmt: booking.partyFreight || '',
-                        advanced: totalAdvance,
-                        deduction: totalDeduction,
+                        advanced: totalAdvance || 0,
+                        received: 0,
+                        deduction: totalDeduction || 0,
                         balance: balance,
                     });
                 }
@@ -299,11 +307,19 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
             const newArticles = [...articles];
             const advanceRowIndex = newArticles.findIndex(item => item.isAdvanceRow);
             if (advanceRowIndex !== -1) {
+                newArticles[advanceRowIndex].advanced = currentAdvanced;
+                newArticles[advanceRowIndex].received = currentReceived;
+                newArticles[advanceRowIndex].deduction = currentDeduction;
                 newArticles[advanceRowIndex].balance = currentBalance;
                 setArticles(newArticles);
             }
         }
-    }, [form?.getFieldValue('advanced'), form?.getFieldValue('deduction'), form?.getFieldValue('totalFreightAmt')]);
+    }, [
+        form?.getFieldValue('advanced'), 
+        form?.getFieldValue('received'), 
+        form?.getFieldValue('deduction'), 
+        form?.getFieldValue('totalFreightAmt')
+    ]);
 
     const columns = [
         {
@@ -314,12 +330,12 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
                 if (record.isAdvanceRow) {
                     return (
                         <div style={{ fontWeight: 'bold', color: '#1890ff' }}>
-                            Advanced Mode
+                            Payment Details
                         </div>
                     );
                 }
                 return (
-                    <Form.Item name="noOfArticles" style={{ margin: 0 }}>
+                    <Form.Item name={['articles', index, 'noOfArticles']} style={{ margin: 0 }}>
                         <Input
                             style={{ width: '100%' }}
                             value={text}
@@ -342,12 +358,13 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
                         <Form.Item name="advancedMode" style={{ margin: 0 }}>
                             <Select style={{ width: '100%' }} defaultValue="Received">
                                 <Option value="Received">Received</Option>
+                                <Option value="Pending">Pending</Option>
                             </Select>
                         </Form.Item>
                     );
                 }
                 return (
-                    <Form.Item name="particular" style={{ margin: 0 }}>
+                    <Form.Item name={['articles', index, 'particular']} style={{ margin: 0 }}>
                         <Input
                             style={{ width: '100%' }}
                             value={text}
@@ -370,7 +387,7 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
                     return <div style={{ fontWeight: 'bold', textAlign: 'center' }}>Advanced</div>;
                 }
                 return (
-                    <Form.Item name="weightType" style={{ margin: 0 }}>
+                    <Form.Item name={['articles', index, 'weightType']} style={{ margin: 0 }}>
                         <Select style={{ width: '100%' }} defaultValue="Ton">
                             <Option value="Ton">Ton</Option>
                             <Option value="Kg">Kg</Option>
@@ -386,25 +403,27 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
             render: (text, record, index) => {
                 if (record.isAdvanceRow) {
                     return (
-                        <InputNumber
-                            style={{ width: '100%' }}
-                            value={record.advanced}
-                            formatter={value => `₹${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                            parser={value => value.replace(/₹\s?|(,*)/g, '')}
-                            onChange={(value) => {
-                                const newArticles = [...articles];
-                                newArticles[index].advanced = value;
-                                setArticles(newArticles);
-                                form.setFieldsValue({ advanced: value });
+                        <Form.Item name="advanced" style={{ margin: 0 }}>
+                            <InputNumber
+                                style={{ width: '100%' }}
+                                value={record.advanced}
+                                formatter={value => `₹${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                parser={value => value.replace(/₹\s?|(,*)/g, '')}
+                                onChange={(value) => {
+                                    const newArticles = [...articles];
+                                    newArticles[index].advanced = value;
+                                    setArticles(newArticles);
+                                    form.setFieldsValue({ advanced: value });
 
-                                // Update balance after advanced change
-                                const total = parseFloat(form.getFieldValue('totalFreightAmt') || 0);
-                                const deduction = parseFloat(form.getFieldValue('deduction') || 0);
-                                const received = parseFloat(form.getFieldValue('received') || 0);
-                                const newBalance = (total - (value || 0) - deduction - received).toFixed(2);
-                                form.setFieldsValue({ balance: newBalance });
-                            }}
-                        />
+                                    // Update balance after advanced change
+                                    const total = parseFloat(form.getFieldValue('totalFreightAmt') || 0);
+                                    const deduction = parseFloat(form.getFieldValue('deduction') || 0);
+                                    const received = parseFloat(form.getFieldValue('received') || 0);
+                                    const newBalance = (total - (value || 0) - deduction - received).toFixed(2);
+                                    form.setFieldsValue({ balance: newBalance });
+                                }}
+                            />
+                        </Form.Item>
                     );
                 }
                 return (
@@ -430,7 +449,7 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
             render: (text, record, index) => {
                 if (record.isAdvanceRow) {
                     return (
-                        <div style={{ fontWeight: 'bold', textAlign: 'center' }}>Deduction</div>
+                        <div style={{ fontWeight: 'bold', textAlign: 'center' }}>Received</div>
                     );
                 }
                 return (
@@ -458,11 +477,11 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
             render: (text, record, index) => {
                 if (record.isAdvanceRow) {
                     return (
-                        <div style={{ fontWeight: 'bold', textAlign: 'center' }}>Balance</div>
+                        <div style={{ fontWeight: 'bold', textAlign: 'center' }}>Deduction</div>
                     );
                 }
                 return (
-                    <Form.Item name="rateType" style={{ margin: 0 }}>
+                    <Form.Item name={['articles', index, 'rateType']} style={{ margin: 0 }}>
                         <Select style={{ width: '100%' }} defaultValue="Weight">
                             <Option value="Weight">Weight</Option>
                             <Option value="Fixed">Fixed</Option>
@@ -477,46 +496,58 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
             width: 150,
             render: (text, record, index) => {
                 if (record.isAdvanceRow) {
-                    const currentBalance = form?.getFieldValue('balance') || balance;
                     return (
                         <Space direction="vertical" size={4} style={{ width: '100%' }}>
                             <div>
                                 <Text strong style={{ minWidth: 80, display: 'inline-block' }}>Advanced:</Text>
-                                <InputNumber
-                                    size="small"
-                                    value={record.advanced}
-                                    formatter={value => `₹${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                                    parser={value => value.replace(/₹\s?|(,*)/g, '')}
-                                    onChange={(value) => {
-                                        const newArticles = [...articles];
-                                        newArticles[index].advanced = value;
-                                        setArticles(newArticles);
-                                        form.setFieldsValue({ advanced: value });
-                                    }}
-                                    style={{ width: 120 }}
-                                />
+                                <Form.Item name="advanced" style={{ display: 'inline-block', margin: '0 0 0 8px' }}>
+                                    <InputNumber
+                                        size="small"
+                                        formatter={value => `₹${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                        parser={value => value.replace(/₹\s?|(,*)/g, '')}
+                                        onChange={(value) => {
+                                            const newArticles = [...articles];
+                                            newArticles[index].advanced = value;
+                                            setArticles(newArticles);
+                                            form.setFieldsValue({ advanced: value });
+                                        }}
+                                        style={{ width: 120 }}
+                                    />
+                                </Form.Item>
+                            </div>
+                            <div>
+                                <Text strong style={{ minWidth: 80, display: 'inline-block' }}>Received:</Text>
+                                <Form.Item name="received" style={{ display: 'inline-block', margin: '0 0 0 8px' }}>
+                                    <InputNumber
+                                        size="small"
+                                        formatter={value => `₹${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                        parser={value => value.replace(/₹\s?|(,*)/g, '')}
+                                        onChange={(value) => {
+                                            const newArticles = [...articles];
+                                            newArticles[index].received = value;
+                                            setArticles(newArticles);
+                                            form.setFieldsValue({ received: value });
+                                        }}
+                                        style={{ width: 120 }}
+                                    />
+                                </Form.Item>
                             </div>
                             <div>
                                 <Text strong style={{ minWidth: 80, display: 'inline-block' }}>Deduction:</Text>
-                                <InputNumber
-                                    size="small"
-                                    value={record.deduction}
-                                    formatter={value => `₹${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                                    parser={value => value.replace(/₹\s?|(,*)/g, '')}
-                                    onChange={(value) => {
-                                        const newArticles = [...articles];
-                                        newArticles[index].deduction = value;
-                                        setArticles(newArticles);
-                                        form.setFieldsValue({ deduction: value });
-                                    }}
-                                    style={{ width: 120 }}
-                                />
-                            </div>
-                            <div>
-                                <Text strong style={{ minWidth: 80, display: 'inline-block' }}>Balance:</Text>
-                                <Text strong type="success" style={{ fontSize: '14px' }}>
-                                    ₹{parseFloat(currentBalance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </Text>
+                                <Form.Item name="deduction" style={{ display: 'inline-block', margin: '0 0 0 8px' }}>
+                                    <InputNumber
+                                        size="small"
+                                        formatter={value => `₹${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                        parser={value => value.replace(/₹\s?|(,*)/g, '')}
+                                        onChange={(value) => {
+                                            const newArticles = [...articles];
+                                            newArticles[index].deduction = value;
+                                            setArticles(newArticles);
+                                            form.setFieldsValue({ deduction: value });
+                                        }}
+                                        style={{ width: 120 }}
+                                    />
+                                </Form.Item>
                             </div>
                         </Space>
                     );
@@ -540,18 +571,26 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
             },
         },
         {
-            title: 'Remarks',
-            dataIndex: 'remarks',
+            title: 'Balance',
+            dataIndex: 'balance',
+            width: 150,
             render: (text, record, index) => {
                 if (record.isAdvanceRow) {
+                    const currentBalance = form?.getFieldValue('balance') || balance;
                     return (
-                        <Form.Item name="remark" style={{ margin: 0 }}>
-                            <Input placeholder="Remark" />
-                        </Form.Item>
+                        <div>
+                            <Text strong style={{ display: 'block', marginBottom: 4 }}>Balance:</Text>
+                            <Text strong type={currentBalance >= 0 ? "success" : "danger"} style={{ fontSize: '16px' }}>
+                                ₹{parseFloat(currentBalance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </Text>
+                            <Form.Item name="balance" hidden>
+                                <InputNumber />
+                            </Form.Item>
+                        </div>
                     );
                 }
                 return (
-                    <Form.Item name="remarks" style={{ margin: 0 }}>
+                    <Form.Item name={['articles', index, 'remarks']} style={{ margin: 0 }}>
                         <Input
                             style={{ width: '100%' }}
                             value={text}
@@ -560,6 +599,7 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
                                 newArticles[index].remarks = e.target.value;
                                 setArticles(newArticles);
                             }}
+                            placeholder="Remarks"
                         />
                     </Form.Item>
                 );
@@ -571,7 +611,13 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
         try {
             await form.validateFields();
             const values = form.getFieldsValue();
-
+            
+            // Debug: Log all form values
+            console.log('Form values:', values);
+            console.log('Advanced from form:', values.advanced);
+            console.log('Received from form:', values.received);
+            console.log('Deduction from form:', values.deduction);
+            
             // Calculate total freight from weight and rate
             const totalFreight = Number(values.weight || 0) * Number(values.rate || 0);
             const calculatedBalance = totalFreight -
@@ -579,10 +625,25 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
                 Number(values.received || 0) -
                 Number(values.deduction || 0);
 
+            // Prepare articles data (excluding the advance row)
+            const articleData = articles
+                .filter(item => !item.isAdvanceRow)
+                .map(item => ({
+                    noOfArticles: item.noOfArticles,
+                    particular: item.particular,
+                    weightType: item.weightType,
+                    weight: item.weight,
+                    rate: item.rate,
+                    rateType: item.rateType,
+                    totalFreightAmt: item.totalFreightAmt,
+                    remarks: item.remarks,
+                }));
+
             const payload = {
                 ...values,
                 bookingId: booking.id,
                 partyId: booking.party?.id,
+                companyId: booking.companyId,
                 biltyDate: values.biltyDate ? values.biltyDate.format('YYYY-MM-DD') : null,
                 bookingSlipDate: values.bookingSlipDate ? values.bookingSlipDate.format('YYYY-MM-DD') : null,
                 totalFreightAmt: totalFreight,
@@ -593,7 +654,10 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
                 weight: Number(values.weight || 0),
                 rate: Number(values.rate || 0),
                 goodsValue: Number(values.goodsValue || 0),
+                articles: articleData,
             };
+            
+            console.log('API Payload:', payload);
 
             setSaving(true);
             const token = localStorage.getItem('token');
@@ -681,7 +745,7 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
             onCancel={onClose}
             width={1300}
             footer={null}
-            destroyOnHidden
+            destroyOnClose
         >
             <Form form={form} layout="vertical">
                 {/* Header Section */}
@@ -691,7 +755,7 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
                         border: '1px solid #ffe58f',
                         marginBottom: 16,
                     }}
-                    bodystyles={{ padding: '16px 24px' }}
+                    bodyStyle={{ padding: '16px 24px' }}
                 >
                     <Row gutter={[16, 8]} align="middle">
                         <Col span={6}>
@@ -820,8 +884,24 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
                 <Card
                     title="Articles & Payment Details"
                     style={{ marginBottom: 16 }}
-                    bodyStyle={{ padding: 0 }}
+                    bodyStyle={{ padding: '16px 24px' }}
                 >
+                    {/* Hidden form items to ensure form captures all values */}
+                    <div style={{ display: 'none' }}>
+                        <Form.Item name="advanced" initialValue={0}>
+                            <InputNumber />
+                        </Form.Item>
+                        <Form.Item name="received" initialValue={0}>
+                            <InputNumber />
+                        </Form.Item>
+                        <Form.Item name="deduction" initialValue={0}>
+                            <InputNumber />
+                        </Form.Item>
+                        <Form.Item name="balance" initialValue={0}>
+                            <InputNumber />
+                        </Form.Item>
+                    </div>
+                    
                     <Table
                         columns={columns}
                         dataSource={articles}
@@ -831,6 +911,63 @@ const BiltyForm = ({ booking, visible, onClose, onSuccess }) => {
                         bordered
                         scroll={{ x: 'max-content' }}
                     />
+                </Card>
+
+                {/* Payment Summary */}
+                <Card
+                    title="Payment Summary"
+                    style={{ marginBottom: 16 }}
+                    bodyStyle={{ padding: '16px 24px' }}
+                >
+                    <Row gutter={16}>
+                        <Col span={6}>
+                            <Form.Item label="Total Freight Amount" name="totalFreightAmt">
+                                <InputNumber
+                                    style={{ width: '100%' }}
+                                    formatter={value => `₹${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                    parser={value => value.replace(/₹\s?|(,*)/g, '')}
+                                    readOnly
+                                />
+                            </Form.Item>
+                        </Col>
+                        <Col span={6}>
+                            <Form.Item label="Advance Amount" name="advanced">
+                                <InputNumber
+                                    style={{ width: '100%' }}
+                                    formatter={value => `₹${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                    parser={value => value.replace(/₹\s?|(,*)/g, '')}
+                                />
+                            </Form.Item>
+                        </Col>
+                        <Col span={6}>
+                            <Form.Item label="Received Amount" name="received">
+                                <InputNumber
+                                    style={{ width: '100%' }}
+                                    formatter={value => `₹${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                    parser={value => value.replace(/₹\s?|(,*)/g, '')}
+                                />
+                            </Form.Item>
+                        </Col>
+                        <Col span={6}>
+                            <Form.Item label="Deduction Amount" name="deduction">
+                                <InputNumber
+                                    style={{ width: '100%' }}
+                                    formatter={value => `₹${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                    parser={value => value.replace(/₹\s?|(,*)/g, '')}
+                                />
+                            </Form.Item>
+                        </Col>
+                        <Col span={6}>
+                            <Form.Item label="Balance Amount" name="balance">
+                                <InputNumber
+                                    style={{ width: '100%' }}
+                                    formatter={value => `₹${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                    parser={value => value.replace(/₹\s?|(,*)/g, '')}
+                                    readOnly
+                                />
+                            </Form.Item>
+                        </Col>
+                    </Row>
                 </Card>
 
                 {/* Invoice Details */}

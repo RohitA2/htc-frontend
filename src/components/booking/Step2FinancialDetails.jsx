@@ -8,7 +8,9 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
     const [loadingDifferenceBanks, setLoadingDifferenceBanks] = useState(false);
     const [bankError, setBankError] = useState('');
 
-    // Fetch bank accounts when commission payment mode changes to bank
+
+    const API_URL = import.meta.env.VITE_API_BASE_URL;
+
     useEffect(() => {
         if (formData.commissionPaymentMode === 'bank') {
             fetchCommissionBanks();
@@ -17,7 +19,6 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
         }
     }, [formData.commissionPaymentMode]);
 
-    // Fetch bank accounts when difference payment mode changes to bank
     useEffect(() => {
         if (formData.differencePaymentMode === 'bank') {
             fetchDifferenceBanks();
@@ -29,9 +30,9 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
     const fetchCommissionBanks = async () => {
         setLoadingCommissionBanks(true);
         setBankError('');
-        
+
         try {
-            const response = await axios.get('http://localhost:5000/api/bank/list');
+            const response = await axios.get(`${API_URL}/bank/list`);
             if (response.data.success) {
                 setCommissionBanks(response.data.data);
             } else {
@@ -48,9 +49,9 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
     const fetchDifferenceBanks = async () => {
         setLoadingDifferenceBanks(true);
         setBankError('');
-        
+
         try {
-            const response = await axios.get('http://localhost:5000/api/bank/list');
+            const response = await axios.get(`${API_URL}/bank/list`);
             if (response.data.success) {
                 setDifferenceBanks(response.data.data);
             } else {
@@ -68,7 +69,7 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
         const selectedBankId = e.target.value;
         const bankList = type === 'commission' ? commissionBanks : differenceBanks;
         const selectedBank = bankList.find(bank => bank.id.toString() === selectedBankId);
-        
+
         if (selectedBank) {
             if (type === 'commission') {
                 handleChange({
@@ -98,6 +99,10 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
     const truckNetAmount = safeCalc(calculations?.truckNetAmount);
     const partyPending = safeCalc(calculations?.partyPending);
     const truckPending = safeCalc(calculations?.truckPending);
+    const haltingCharges = safeCalc(calculations?.haltingCharges);
+    const haltingPaidAmount = safeCalc(calculations?.haltingPaidAmount);
+    const haltingPending = safeCalc(calculations?.haltingPending);
+
     const initialPaymentFromParty = Number(formData.initialPaymentFromParty) || 0;
     const initialPaymentToTruck = Number(formData.initialPaymentToTruck) || 0;
 
@@ -105,6 +110,21 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
 
     const isTruckCommission = formData.commissionType === 'truck';
     const isPartyCommission = formData.commissionType === 'party';
+
+    // Calculate halting charges automatically
+    const calculateHaltingCharges = () => {
+        const pricePerDay = Number(formData.haltingDetails?.pricePerDay) || 0;
+        const haltingDays = Number(formData.haltingDetails?.haltingDays) || 0;
+        const charges = pricePerDay * haltingDays;
+
+        handleChange({
+            target: {
+                name: 'halting.haltingCharges',
+                value: charges.toFixed(2)
+            }
+        });
+        handleCalculate();
+    };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -151,16 +171,6 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                                         }`}
                                 />
                             </div>
-                            {(formData.commissionType === 'truck' && formData.truckCommissionAmount) && (
-                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    Auto-filled from Truck Commission: ₹{Number(formData.truckCommissionAmount).toFixed(2)}
-                                </p>
-                            )}
-                            {(formData.commissionType === 'party' && formData.commissionPercentage && formData.rate && formData.weight) && (
-                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    Calculated from {formData.commissionPercentage}% of Party Freight
-                                </p>
-                            )}
                         </div>
                     </div>
 
@@ -198,7 +208,7 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                                     <p className="text-sm text-red-600">{bankError}</p>
                                 </div>
                             )}
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Bank Account</label>
@@ -222,11 +232,6 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                                             </div>
                                         )}
                                     </div>
-                                    {commissionBanks.length === 0 && !loadingCommissionBanks && (
-                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                            No bank accounts available. Please add bank accounts first.
-                                        </p>
-                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Account Number</label>
@@ -241,7 +246,7 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                                     />
                                 </div>
                             </div>
-                            
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">UTR / Ref No</label>
                                 <input
@@ -253,33 +258,6 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                                 />
                             </div>
-                            
-                            {/* Show selected bank details */}
-                            {formData.commissionBankAccountNo && commissionBanks.length > 0 && (
-                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                                    {(() => {
-                                        const selectedBank = commissionBanks.find(bank => 
-                                            bank.accountNo === formData.commissionBankAccountNo
-                                        );
-                                        if (selectedBank) {
-                                            return (
-                                                <>
-                                                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                                                        <span className="font-medium">Account Holder:</span> {selectedBank.acHolderName}
-                                                    </p>
-                                                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                                                        <span className="font-medium">Branch:</span> {selectedBank.branchName}
-                                                    </p>
-                                                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                                                        <span className="font-medium">IFSC:</span> {selectedBank.IFSCode}
-                                                    </p>
-                                                </>
-                                            );
-                                        }
-                                        return null;
-                                    })()}
-                                </div>
-                            )}
                         </div>
                     )}
 
@@ -300,7 +278,7 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                     <h3 className="text-xl font-semibold mb-6 text-gray-800 dark:text-gray-200">Difference / Adjustment Details</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <div >
+                        <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment Type</label>
                             <select
                                 name="differencePaymentType"
@@ -329,9 +307,6 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                                         }`}
                                 />
                             </div>
-                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                Auto-calculated: Party Freight (₹{partyFreight.toFixed(2)}) - Truck Freight (₹{truckFreight.toFixed(2)})
-                            </p>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -367,7 +342,7 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                                     <p className="text-sm text-red-600">{bankError}</p>
                                 </div>
                             )}
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Bank Account</label>
@@ -391,11 +366,6 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                                             </div>
                                         )}
                                     </div>
-                                    {differenceBanks.length === 0 && !loadingDifferenceBanks && (
-                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                            No bank accounts available. Please add bank accounts first.
-                                        </p>
-                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Account Number</label>
@@ -410,7 +380,7 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                                     />
                                 </div>
                             </div>
-                            
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">UTR / Ref No</label>
                                 <input
@@ -422,33 +392,6 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                                 />
                             </div>
-                            
-                            {/* Show selected bank details */}
-                            {formData.differenceBankAccountNo && differenceBanks.length > 0 && (
-                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                                    {(() => {
-                                        const selectedBank = differenceBanks.find(bank => 
-                                            bank.accountNo === formData.differenceBankAccountNo
-                                        );
-                                        if (selectedBank) {
-                                            return (
-                                                <>
-                                                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                                                        <span className="font-medium">Account Holder:</span> {selectedBank.acHolderName}
-                                                    </p>
-                                                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                                                        <span className="font-medium">Branch:</span> {selectedBank.branchName}
-                                                    </p>
-                                                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                                                        <span className="font-medium">IFSC:</span> {selectedBank.IFSCode}
-                                                    </p>
-                                                </>
-                                            );
-                                        }
-                                        return null;
-                                    })()}
-                                </div>
-                            )}
                         </div>
                     )}
 
@@ -466,46 +409,223 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                 </div>
             </div>
 
-            {/* Right Column - Initial Payments & Summary */}
+            {/* Right Column - Initial Payments, Halting & Summary */}
             <div className="space-y-8">
-                {/* Initial Payments */}
+                {/* Initial Payments with Bank Details */}
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                     <h3 className="text-xl font-semibold mb-6 text-gray-800 dark:text-gray-200">Initial Payments</h3>
 
                     <div className="space-y-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment to Truck Owner/Driver (₹)</label>
-                            <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
-                                <input
-                                    type="number"
-                                    name="initialPaymentToTruck"
-                                    value={formData.initialPaymentToTruck || ''}
-                                    onChange={handleChange}
-                                    onBlur={handleCalculate}
-                                    step="0.01"
-                                    min="0"
-                                    placeholder="Advance paid"
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                                />
+                        {/* Payment to Truck */}
+                        <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                            <h4 className="font-semibold mb-4 text-gray-800 dark:text-gray-200">Payment to Truck Owner/Driver</h4>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Amount (₹)</label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                                        <input
+                                            type="number"
+                                            name="initialPaymentToTruck"
+                                            value={formData.initialPaymentToTruck || ''}
+                                            onChange={handleChange}
+                                            onBlur={handleCalculate}
+                                            step="0.01"
+                                            min="0"
+                                            placeholder="Advance paid"
+                                            className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment Mode</label>
+                                    <select
+                                        name="truckPaymentMode"
+                                        value={formData.truckPaymentMode || ''}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                    >
+                                        <option value="">Select Mode</option>
+                                        <option value="cash">Cash</option>
+                                        <option value="bank">Bank Transfer</option>
+                                    </select>
+                                </div>
+
+                                {formData.truckPaymentMode === 'bank' && (
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Bank Name</label>
+                                                <input
+                                                    type="text"
+                                                    name="truckBankName"
+                                                    value={formData.truckBankName || ''}
+                                                    onChange={handleChange}
+                                                    placeholder="Bank Name"
+                                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Account No</label>
+                                                <input
+                                                    type="text"
+                                                    name="truckAccountNo"
+                                                    value={formData.truckAccountNo || ''}
+                                                    onChange={handleChange}
+                                                    placeholder="Account Number"
+                                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">IFSC Code</label>
+                                                <input
+                                                    type="text"
+                                                    name="truckIfscCode"
+                                                    value={formData.truckIfscCode || ''}
+                                                    onChange={handleChange}
+                                                    placeholder="IFSC Code"
+                                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">UTR No</label>
+                                                <input
+                                                    type="text"
+                                                    name="truckUtrNo"
+                                                    value={formData.truckUtrNo || ''}
+                                                    onChange={handleChange}
+                                                    placeholder="UTR/Ref No"
+                                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">PAN Number</label>
+                                            <input
+                                                type="text"
+                                                name="truckPanNumber"
+                                                value={formData.truckPanNumber}
+                                                onChange={handleChange}
+                                                placeholder="PAN Number"
+                                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment Date</label>
+                                            <input
+                                                type="date"
+                                                name="truckPaymentDate"
+                                                value={formData.truckPaymentDate || ''}
+                                                onChange={handleChange}
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment Received from Party (₹)</label>
-                            <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
-                                <input
-                                    type="number"
-                                    name="initialPaymentFromParty"
-                                    value={formData.initialPaymentFromParty || ''}
-                                    onChange={handleChange}
-                                    onBlur={handleCalculate}
-                                    step="0.01"
-                                    min="0"
-                                    placeholder="Advance received"
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                                />
+                        {/* Payment from Party */}
+                        <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                            <h4 className="font-semibold mb-4 text-gray-800 dark:text-gray-200">Payment Received from Party</h4>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Amount (₹)</label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                                        <input
+                                            type="number"
+                                            name="initialPaymentFromParty"
+                                            value={formData.initialPaymentFromParty || ''}
+                                            onChange={handleChange}
+                                            onBlur={handleCalculate}
+                                            step="0.01"
+                                            min="0"
+                                            placeholder="Advance received"
+                                            className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment Mode</label>
+                                    <select
+                                        name="partyPaymentMode"
+                                        value={formData.partyPaymentMode || ''}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                    >
+                                        <option value="">Select Mode</option>
+                                        <option value="cash">Cash</option>
+                                        <option value="bank">Bank Transfer</option>
+                                    </select>
+                                </div>
+
+                                {formData.partyPaymentMode === 'bank' && (
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Bank Name</label>
+                                                <input
+                                                    type="text"
+                                                    name="partyBankName"
+                                                    value={formData.partyBankName || ''}
+                                                    onChange={handleChange}
+                                                    placeholder="Bank Name"
+                                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Account No</label>
+                                                <input
+                                                    type="text"
+                                                    name="partyAccountNo"
+                                                    value={formData.partyAccountNo || ''}
+                                                    onChange={handleChange}
+                                                    placeholder="Account Number"
+                                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">IFSC Code</label>
+                                                <input
+                                                    type="text"
+                                                    name="partyIfscCode"
+                                                    value={formData.partyIfscCode || ''}
+                                                    onChange={handleChange}
+                                                    placeholder="IFSC Code"
+                                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">UTR No</label>
+                                                <input
+                                                    type="text"
+                                                    name="partyUtrNo"
+                                                    value={formData.partyUtrNo || ''}
+                                                    onChange={handleChange}
+                                                    placeholder="UTR/Ref No"
+                                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment Date</label>
+                                            <input
+                                                type="date"
+                                                name="partyPaymentDate"
+                                                value={formData.partyPaymentDate || ''}
+                                                onChange={handleChange}
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -516,6 +636,148 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                         >
                             Recalculate All Amounts
                         </button>
+                    </div>
+                </div>
+
+                {/* Halting Details */}
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <h3 className="text-xl font-semibold mb-6 text-gray-800 dark:text-gray-200">Halting Details</h3>
+
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Halting Date</label>
+                                <input
+                                    type="date"
+                                    name="halting.haltingDate"
+                                    value={formData.haltingDetails?.haltingDate || ''}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Arrival Time</label>
+                                <input
+                                    type="time"
+                                    name="halting.arrivalTime"
+                                    value={formData.haltingDetails?.arrivalTime || ''}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Price Per Day (₹)</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                                    <input
+                                        type="number"
+                                        name="halting.pricePerDay"
+                                        value={formData.haltingDetails?.pricePerDay || ''}
+                                        onChange={(e) => {
+                                            handleChange(e);
+                                            calculateHaltingCharges();
+                                        }}
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="0.00"
+                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Halting Days</label>
+                                <input
+                                    type="number"
+                                    name="halting.haltingDays"
+                                    value={formData.haltingDetails?.haltingDays || ''}
+                                    onChange={(e) => {
+                                        handleChange(e);
+                                        calculateHaltingCharges();
+                                    }}
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0"
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Total Charges (₹)</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                                    <input
+                                        type="number"
+                                        name="halting.haltingCharges"
+                                        value={formData.haltingDetails?.haltingCharges || haltingCharges || ''}
+                                        onChange={handleChange}
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="0.00"
+                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                        readOnly
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Halting Reason</label>
+                            <textarea
+                                name="halting.haltingReason"
+                                value={formData.haltingDetails?.haltingReason || ''}
+                                onChange={handleChange}
+                                rows="2"
+                                placeholder="Reason for halting"
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Amount Paid (₹)</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
+                                    <input
+                                        type="number"
+                                        name="halting.haltingPaidAmount"
+                                        value={formData.haltingDetails?.haltingPaidAmount || haltingPaidAmount || ''}
+                                        onChange={handleChange}
+                                        onBlur={handleCalculate}
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="0.00"
+                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment Status</label>
+                                <select
+                                    name="halting.haltingPaymentStatus"
+                                    value={formData.haltingDetails?.haltingPaymentStatus || 'pending'}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                >
+                                    <option value="pending">Pending</option>
+                                    <option value="partial">Partial</option>
+                                    <option value="paid">Paid</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Halting Remarks</label>
+                            <textarea
+                                name="halting.haltingRemark"
+                                value={formData.haltingDetails?.haltingRemark || ''}
+                                onChange={handleChange}
+                                rows="2"
+                                placeholder="Any additional remarks"
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -551,6 +813,12 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                                     <span>Truck Freight:</span>
                                     <strong>₹{truckFreight.toFixed(2)}</strong>
                                 </div>
+                                {haltingCharges > 0 && (
+                                    <div className="flex justify-between text-orange-600 dark:text-orange-400">
+                                        <span>Halting Charges:</span>
+                                        <span>+₹{haltingCharges.toFixed(2)}</span>
+                                    </div>
+                                )}
                                 {isTruckCommission && commissionAmount > 0 && (
                                     <div className="flex justify-between text-red-600 dark:text-red-400">
                                         <span>Commission Deducted:</span>
@@ -563,10 +831,31 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                                 </div>
                                 <div className="border-t border-gray-300 dark:border-gray-600 pt-2 flex justify-between font-bold text-emerald-800 dark:text-emerald-200">
                                     <span>Balance Payable:</span>
-                                    <span>₹{(truckFreight - (isTruckCommission ? commissionAmount : 0) - initialPaymentToTruck).toFixed(2)}</span>
+                                    <span>₹{(truckFreight + haltingCharges - (isTruckCommission ? commissionAmount : 0) - initialPaymentToTruck).toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Halting Summary */}
+                        {haltingCharges > 0 && (
+                            <div className="mb-8 bg-white/50 dark:bg-gray-800/50 p-5 rounded-lg">
+                                <h4 className="text-lg font-medium mb-4 text-orange-800 dark:text-orange-300">Halting Summary</h4>
+                                <div className="space-y-3 text-sm text-gray-800 dark:text-gray-200">
+                                    <div className="flex justify-between">
+                                        <span>Total Halting Charges:</span>
+                                        <strong>₹{haltingCharges.toFixed(2)}</strong>
+                                    </div>
+                                    <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                                        <span>Amount Paid:</span>
+                                        <span>-₹{haltingPaidAmount.toFixed(2)}</span>
+                                    </div>
+                                    <div className="border-t border-gray-300 dark:border-gray-600 pt-2 flex justify-between font-bold text-orange-800 dark:text-orange-200">
+                                        <span>Balance Pending:</span>
+                                        <span>₹{haltingPending.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="text-center py-12 text-gray-500 dark:text-gray-400">

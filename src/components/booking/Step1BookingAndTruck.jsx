@@ -2,10 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calculations }) => {
-    // console.log('formData is', formData);
-    // console.log('handleCalculate is', handleCalculate);
-    // console.log('calculations is', calculations);
-    // console.log('handleChange is', handleChange);
     const [companies, setCompanies] = useState([]);
     const [loadingCompanies, setLoadingCompanies] = useState(false);
     const [loadingParties, setLoadingParties] = useState(false);
@@ -19,10 +15,10 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
         partyAddress: ''
     });
     const [addingParty, setAddingParty] = useState(false);
+    const API_URL = import.meta.env.VITE_API_BASE_URL;
 
     const partySelectRef = useRef(null);
 
-    // Fetch companies on component mount
     useEffect(() => {
         fetchCompanies();
         fetchParties();
@@ -33,7 +29,7 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
         setCompanyError('');
 
         try {
-            const response = await axios.get('http://localhost:5000/api/company/list');
+            const response = await axios.get(`${API_URL}/company/list`);
             if (response.data.success) {
                 setCompanies(response.data.data);
             } else {
@@ -85,8 +81,6 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
             }
         });
 
-        // You can also store additional company info if needed
-        // For example, auto-fill transporter name if it's the same company
         if (selectedCompany && !formData.transporterName) {
             handleChange({
                 target: {
@@ -101,7 +95,6 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
         const selectedPartyId = e.target.value;
 
         if (selectedPartyId === 'add_new') {
-            // Show add party modal
             setShowAddPartyModal(true);
             return;
         }
@@ -116,7 +109,6 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
         });
 
         if (selectedParty) {
-            // Auto-fill party details
             handleChange({
                 target: {
                     name: 'partyName',
@@ -148,15 +140,13 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
 
         setAddingParty(true);
         try {
-            const response = await axios.post('http://localhost:5000/api/party/create', newParty);
+            const response = await axios.post(`${API_URL}/party/create`, newParty);
 
             if (response.data.success) {
                 const addedParty = response.data.data;
 
-                // Add to local state
                 setParties(prev => [...prev, addedParty]);
 
-                // Select the newly added party
                 handleChange({
                     target: {
                         name: 'partyId',
@@ -164,7 +154,6 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                     }
                 });
 
-                // Auto-fill party details
                 handleChange({
                     target: {
                         name: 'partyName',
@@ -186,7 +175,6 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                     }
                 });
 
-                // Close modal and reset form
                 setShowAddPartyModal(false);
                 setNewParty({
                     partyName: '',
@@ -208,7 +196,6 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
         const { name, value } = e.target;
         handleChange(e);
 
-        // When user manually enters party name, clear the partyId
         if (name === 'partyName' && formData.partyId) {
             handleChange({
                 target: {
@@ -229,11 +216,11 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
 
     return (
         <div className="space-y-8">
+            {/* Add Party Modal */}
             {showAddPartyModal && (
                 <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
                         <div className="p-6">
-                            {/* Header */}
                             <div className="flex justify-between items-center mb-6">
                                 <div>
                                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">Add New Party</h3>
@@ -249,7 +236,6 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                                 </button>
                             </div>
 
-                            {/* Form */}
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -296,7 +282,6 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                                 </div>
                             </div>
 
-                            {/* Action Buttons */}
                             <div className="flex gap-3 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
                                 <button
                                     type="button"
@@ -326,6 +311,7 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                     </div>
                 </div>
             )}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Booking Information */}
                 <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700">
@@ -352,7 +338,7 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                                 required
                             >
-                                <option value="commission_only">Commission Only</option>
+                                <option value="commission only">Commission Only</option>
                                 <option value="bank">Bank</option>
                                 <option value="difference">Difference</option>
                                 <option value="stc_truck">STC Truck</option>
@@ -385,28 +371,6 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                             </div>
                             {companyError && (
                                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{companyError}</p>
-                            )}
-                            {formData.companyId && companies.length > 0 && (
-                                <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                                    {(() => {
-                                        const selectedCompany = companies.find(c => c.id.toString() === formData.companyId);
-                                        if (selectedCompany) {
-                                            return (
-                                                <>
-                                                    <p className="text-xs text-gray-600 dark:text-gray-300">
-                                                        <span className="font-medium">Contact:</span> {selectedCompany.personName} ({selectedCompany.phoneNumber})
-                                                    </p>
-                                                    {selectedCompany.gstNo && (
-                                                        <p className="text-xs text-gray-600 dark:text-gray-300">
-                                                            <span className="font-medium">GST:</span> {selectedCompany.gstNo}
-                                                        </p>
-                                                    )}
-                                                </>
-                                            );
-                                        }
-                                        return null;
-                                    })()}
-                                </div>
                             )}
                         </div>
 
@@ -444,29 +408,19 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                             )}
                         </div>
 
-                        {/* Party Name Field - Manual Entry */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Party Name {!formData.partyId && <span className="text-red-500">*</span>}
                             </label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    name="partyName"
-                                    value={formData.partyName || ''}
-                                    onChange={handleManualPartyChange}
-                                    placeholder="Enter party name"
-                                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                                    required={!formData.partyId}
-                                />
-                                {!formData.partyId && formData.partyName && (
-                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                        <div className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                            Manual Entry
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                            <input
+                                type="text"
+                                name="partyName"
+                                value={formData.partyName || ''}
+                                onChange={handleManualPartyChange}
+                                placeholder="Enter party name"
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                required={!formData.partyId}
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Party Phone Number</label>
@@ -665,6 +619,7 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                     </div>
                 </div>
 
+
                 {/* Commission Fields */}
                 <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -679,7 +634,6 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                                 value={formData.truckCommissionAmount || ''}
                                 onChange={(e) => {
                                     handleChange(e);
-                                    // Auto-fill commission amount when truck commission is entered and type is truck
                                     if (formData.commissionType === 'truck') {
                                         handleChange({
                                             target: {
@@ -706,7 +660,6 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                             value={formData.commissionType || ''}
                             onChange={(e) => {
                                 handleChange(e);
-                                // Clear or set commission amount based on type
                                 if (e.target.value === 'truck' && formData.truckCommissionAmount) {
                                     handleChange({
                                         target: {
@@ -755,7 +708,6 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                             value={formData.commissionPercentage || ''}
                             onChange={(e) => {
                                 handleChange(e);
-                                // Auto-calculate commission amount from percentage when type is party
                                 if (e.target.value && formData.rate && formData.weight && formData.commissionType === 'party') {
                                     const calculatedCommission = calculateCommissionFromPercentage();
                                     handleChange({
@@ -837,7 +789,7 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                             className="px-8 py-4 bg-linear-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 011.167.534 7.002 7.002 0 001.667 1.667 7.002 7.002 0 00.534 1.167L17 11a1 1 0 010 2l-2.101.667a7.002 7.002 0 00-.534 1.167 7.002 7.002 0 00-1.667 1.667 7.002 7.002 0 00-1.167.534L11 17a1 1 0 01-2 0l-.667-2.101a7.002 7.002 0 00-1.167-.534 7.002 7.002 0 00-1.667-1.667 7.002 7.002 0 00-.534-1.167L3 13a1 1 0 010-2l2.101-.667a7.002 7.002 0 00.534-1.167 7.002 7.002 0 001.667-1.667 7.002 7.002 0 001.167-.534L9 5a1 1 0 012 0l.667 2.101a7.002 7.002 0 001.167.534 7.002 7.002 0 001.667 1.667 7.002 7.002 0 00.534 1.167L17 9a1 1 0 010 2l-2.101.667a7.002 7.002 0 00-.534 1.167 7.002 7.002 0 00-1.667 1.667 7.002 7.002 0 00-1.167.534L11 15a1 1 0 01-2 0l-.667-2.101a7.002 7.002 0 00-1.167-.534 7.002 7.002 0 00-1.667-1.667 7.002 7.002 0 00-.534-1.167L3 11a1 1 0 010-2l2.101-.667a7.002 7.002 0 00.534-1.167 7.002 7.002 0 001.667-1.667 7.002 7.002 0 001.167-.534L9 3a1 1 0 012 0v2.101a7.002 7.002 0 011.167-.534 7.002 7.002 0 011.167-.534L11 3z" clipRule="evenodd" />
+                                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 011.167.534 7.002 7.002 0 001.667 1.667 7.002 7.002 0 00.534 1.167L17 11a1 1 0 010 2l-2.101.667a7.002 7.002 0 00-.534 1.167 7.002 7.002 0 00-1.667 1.667 7.002 7.002 0 00-1.167.534L11 17a1 1 0 01-2 0l-.667-2.101a7.002 7.002 0 00-1.167-.534 7.002 7.002 0 00-1.667-1.667 7.002 7.002 0 00-.534-1.167L3 13a1 1 0 010-2l2.101-.667a7.002 7.002 0 00.534-1.167 7.002 7.002 0 001.667-1.667 7.002 7.002 0 001.167-.534L9 5a1 1 0 012 0l.667 2.101a7.002 7.002 0 001.167.534 7.002 7.002 0 001.667 1.667 7.002 7.002 0 00.534 1.167L17 9a1 1 0 010 2l-2.101.667a7.002 7.002 0 00-.534 1.167 7.002 7.002 0 00-1.667 1.667 7.002 7.002 0 00-1.167.534L11 15a1 1 0 01-2 0l-.667-2.101a7.002 7.002 0 00-1.167-.534 7.002 7.002 0 00-1.667-1.667 7.002 7.002 0 00-.534-1.167L3 11a1 1 0 010-2l2.101-.667a7.002 7.002 0 00.534-1.167 7.002 7.002 0 001.667-1.667 7.002 7.002 0 001.167-.534L9 3z" clipRule="evenodd" />
                             </svg>
                             Calculate Amounts
                         </button>

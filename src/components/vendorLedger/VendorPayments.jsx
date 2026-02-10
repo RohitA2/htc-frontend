@@ -18,12 +18,15 @@ import {
     ClipboardClock,
     Package,
     Wallet,
-    Percent
+    Percent,
+    HandCoins
 } from 'lucide-react';
+import { FcPaid } from "react-icons/fc";
 import { debounce } from 'lodash';
 import * as XLSX from 'xlsx';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
 
 const VendorLedger = () => {
     const [trucks, setTrucks] = useState([]);
@@ -475,6 +478,11 @@ const VendorLedger = () => {
         ? trucks.filter(t => (parseFloat(t.balance) || 0) > 0).length
         : 0;
 
+
+    const totalPaidAmount = Array.isArray(trucks)
+        ? trucks.reduce((sum, truck) => sum + (parseFloat(truck.totalPaid) || 0), 0)
+        : 0;
+
     const settledTrucksCount = Array.isArray(trucks)
         ? trucks.filter(t => (parseFloat(t.balance) || 0) === 0).length
         : 0;
@@ -563,7 +571,7 @@ const VendorLedger = () => {
                 </div>
 
                 {/* Stats Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     <div className="bg-white p-4 rounded-lg border border-gray-200">
                         <div className="flex items-center">
                             <div className="p-2 bg-blue-100 rounded-lg mr-3">
@@ -581,12 +589,25 @@ const VendorLedger = () => {
                     <div className="bg-white p-4 rounded-lg border border-gray-200">
                         <div className="flex items-center">
                             <div className="p-2 bg-green-100 rounded-lg mr-3">
-                                <DollarSign className="w-5 h-5 text-green-600" />
+                                <DollarSign className="w-5 h-5 text-red-600" />
                             </div>
                             <div>
                                 <p className="text-sm text-gray-600">Total Net Payable</p>
                                 <p className="text-lg font-bold text-gray-800">
                                     ₹{formatCurrency(totalNetPayable)}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                        <div className="flex items-center">
+                            <div className="p-2 bg-orange-100 rounded-lg mr-3">
+                                <HandCoins className="w-5 h-5 text-green-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Paid Balance</p>
+                                <p className="text-lg font-bold text-gray-800">
+                                    ₹{formatCurrency(totalPaidAmount)}
                                 </p>
                             </div>
                         </div>

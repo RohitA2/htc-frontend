@@ -49,7 +49,7 @@ const Step3ReviewAndSubmit = ({ formData, calculations = {} }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Booking Summary */}
-      <div className="bg-white  rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <div className="bg-blue-600 px-6 py-4 text-white">
           <h3 className="text-xl font-semibold">Booking Summary</h3>
         </div>

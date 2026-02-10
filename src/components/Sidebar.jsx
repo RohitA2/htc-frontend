@@ -25,6 +25,7 @@ import { GiWallet } from "react-icons/gi";
 import { FaMoneyBillTransfer } from "react-icons/fa6";
 import { BsCurrencyRupee } from "react-icons/bs";
 import { FaTruckFast } from "react-icons/fa6";
+import { GiProfit } from "react-icons/gi";
 
 const menuGroups = [
     {
@@ -51,6 +52,14 @@ const menuGroups = [
                 ],
             },
             {
+                icon: GiProfit,
+                label: 'Commision',
+                children: [
+                    { label: 'Cash & Bank', to: '/commission-ledger' },
+                    // { label: 'Bank Register', to: '/bankVoucher' },
+                ],
+            },
+            {
                 icon: GiWallet,
                 label: 'Accounts',
                 children: [
@@ -69,14 +78,7 @@ const menuGroups = [
             // { icon: Shredder, label: 'Pending invoice', to: '/pending-invoice' },
             // { icon: Shredder, label: 'Invoice Register', to: '/invoice-register' },
             { icon: FaTruckFast, label: 'Transporters', to: '/transporters' },
-            // {
-            //     icon: Wallet,
-            //     label: 'Commision',
-            //     children: [
-            //         { label: 'Cash Register', to: '/cashVoucher' },
-            //         { label: 'Bank Register', to: '/bankVoucher' },
-            //     ],
-            // },
+
             // {
             //     icon: Wallet,
             //     label: 'Diffrence',

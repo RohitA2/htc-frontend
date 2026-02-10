@@ -180,6 +180,7 @@ const TruckTransactionLedger = () => {
         let totalCommission = 0;
         let totalNetPayable = 0;
         let totalBalance = 0;
+        let totalPaidAmount = 0;
 
         if (Array.isArray(filteredTrucks)) {
             totalTrucks = filteredTrucks.length;
@@ -187,6 +188,7 @@ const TruckTransactionLedger = () => {
             totalCommission = filteredTrucks.reduce((sum, truck) => sum + (truck.totalCommission || 0), 0);
             totalNetPayable = filteredTrucks.reduce((sum, truck) => sum + (truck.netPayable || 0), 0);
             totalBalance = filteredTrucks.reduce((sum, truck) => sum + (truck.balance || 0), 0);
+            totalPaidAmount = filteredTrucks.reduce((sum, truck) => sum + (truck.totalPaid || 0), 0);
         }
 
         return {
@@ -194,7 +196,8 @@ const TruckTransactionLedger = () => {
             totalFreight,
             totalCommission,
             totalNetPayable,
-            totalBalance
+            totalBalance,
+            totalPaidAmount
         };
     };
 
@@ -227,6 +230,7 @@ const TruckTransactionLedger = () => {
                 'Voucher No',
                 'Debit (₹)',
                 'Credit (₹)',
+                'Commission (₹)',
                 'Balance (₹)',
                 'Balance Type'
             ]);
@@ -240,6 +244,7 @@ const TruckTransactionLedger = () => {
                     entry.voucherNo,
                     formatCurrency(entry.debit),
                     formatCurrency(entry.credit),
+                    formatCurrency(entry.commission),
                     formatCurrency(entry.balance),
                     entry.balanceType
                 ]);
@@ -256,6 +261,7 @@ const TruckTransactionLedger = () => {
                 { wch: 12 }, // Voucher No
                 { wch: 15 }, // Debit
                 { wch: 15 }, // Credit
+                { wch: 15 }, // commission
                 { wch: 15 }, // Balance
                 { wch: 12 }  // Balance Type
             ];
@@ -299,6 +305,7 @@ const TruckTransactionLedger = () => {
                         th { background-color: #f5f5f5; }
                         .debit { color: #dc2626; }
                         .credit { color: #16a34a; }
+                        .commission { color: #3b82f6; }
                         .balance { font-weight: bold; }
                         .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
                     </style>
@@ -320,6 +327,7 @@ const TruckTransactionLedger = () => {
                                 <th>Voucher No</th>
                                 <th>Debit (₹)</th>
                                 <th>Credit (₹)</th>
+                                <th>Commission (₹)</th>
                                 <th>Balance (₹)</th>
                                 <th>Balance Type</th>
                             </tr>
@@ -333,6 +341,7 @@ const TruckTransactionLedger = () => {
                                     <td>${entry.voucherNo}</td>
                                     <td class="debit">${entry.debit ? '₹' + formatCurrency(entry.debit) : ''}</td>
                                     <td class="credit">${entry.credit ? '₹' + formatCurrency(entry.credit) : ''}</td>
+                                    <td>${entry.commission ? '₹' + formatCurrency(entry.commission) : ''}</td>
                                     <td class="balance">₹${formatCurrency(entry.balance)}</td>
                                     <td>${entry.balanceType}</td>
                                 </tr>
@@ -425,7 +434,7 @@ const TruckTransactionLedger = () => {
                     </div>
                 </div>
 
-                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                {/* <div className="bg-white p-4 rounded-lg border border-gray-200">
                     <div className="flex items-center">
                         <div className="p-2 bg-orange-100 rounded-lg mr-3">
                             <Wallet className="w-5 h-5 text-orange-600" />
@@ -437,7 +446,7 @@ const TruckTransactionLedger = () => {
                             </p>
                         </div>
                     </div>
-                </div>
+                </div> */}
 
                 <div className="bg-white p-4 rounded-lg border border-gray-200">
                     <div className="flex items-center">
@@ -445,7 +454,7 @@ const TruckTransactionLedger = () => {
                             <Percent className="w-5 h-5 text-purple-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-gray-600">Total Commission</p>
+                            <p className="text-sm text-gray-600">Total Commission Received</p>
                             <p className="text-lg font-bold text-gray-800">
                                 ₹{formatCurrency(stats.totalCommission)}
                             </p>
@@ -456,12 +465,25 @@ const TruckTransactionLedger = () => {
                 <div className="bg-white p-4 rounded-lg border border-gray-200">
                     <div className="flex items-center">
                         <div className="p-2 bg-green-100 rounded-lg mr-3">
-                            <WalletCards className="w-5 h-5 text-green-600" />
+                            <Wallet className="w-5 h-5 text-orange-600" />
                         </div>
                         <div>
                             <p className="text-sm text-gray-600">Net Payable</p>
                             <p className="text-lg font-bold text-gray-800">
                                 ₹{formatCurrency(stats.totalNetPayable)}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                    <div className="flex items-center">
+                        <div className="p-2 bg-green-100 rounded-lg mr-3">
+                            <WalletCards className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-600">Paid Amount</p>
+                            <p className="text-lg font-bold text-gray-800">
+                                ₹{formatCurrency(stats.totalPaidAmount)}
                             </p>
                         </div>
                     </div>
@@ -473,7 +495,7 @@ const TruckTransactionLedger = () => {
                             <Receipt className="w-5 h-5 text-red-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-gray-600">Total Balance</p>
+                            <p className="text-sm text-gray-600">Total Payable Balance</p>
                             <p className="text-lg font-bold text-gray-800">
                                 ₹{formatCurrency(stats.totalBalance)}
                             </p>
@@ -741,7 +763,7 @@ const TruckTransactionLedger = () => {
                                 {/* Summary Cards */}
                                 {ledgerData && (
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                        {/* <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                                             <div className="flex items-center justify-between">
                                                 <div>
                                                     <p className="text-sm text-blue-700 mb-1">Opening Balance</p>
@@ -751,7 +773,7 @@ const TruckTransactionLedger = () => {
                                                 </div>
                                                 <Wallet className="w-8 h-8 text-blue-500" />
                                             </div>
-                                        </div>
+                                        </div> */}
                                         <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                                             <div className="flex items-center justify-between">
                                                 <div>
@@ -854,6 +876,7 @@ const TruckTransactionLedger = () => {
                                                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                             Credit (₹)
                                                         </th>
+                                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commission </th>
                                                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                             Balance (₹)
                                                         </th>
@@ -909,6 +932,13 @@ const TruckTransactionLedger = () => {
                                                                 {entry.credit > 0 && (
                                                                     <span className="text-sm font-bold text-green-700">
                                                                         ₹{formatCurrency(entry.credit)}
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td className="py-3 px-4">
+                                                                {entry.commission > 0 && (
+                                                                    <span className="text-sm font-bold text-purple-700">
+                                                                        ₹{formatCurrency(entry.commission)}
                                                                     </span>
                                                                 )}
                                                             </td>

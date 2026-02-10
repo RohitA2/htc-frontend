@@ -282,7 +282,7 @@ const ChallanModal = ({ isOpen, onClose, onSuccess, challanData, isEditMode = fa
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 backdrop-blur flex items-center justify-center z-50 p-4">
       <div className="bg-white w-full max-w-6xl max-h-[92vh] rounded shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
         <div className="bg-blue-900 text-white px-6 py-3 flex justify-between items-center">
