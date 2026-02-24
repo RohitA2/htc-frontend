@@ -23,11 +23,16 @@ import {
     FileText,
     Percent,
     Receipt,
-    WalletCards
+    WalletCards,
+    FileDown,
+    Clock,
+    IndianRupee
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const TruckTransactionLedger = () => {
     const [trucks, setTrucks] = useState([]);
@@ -36,6 +41,7 @@ const TruckTransactionLedger = () => {
     const [ledgerData, setLedgerData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [loadingLedger, setLoadingLedger] = useState(false);
+    const [loadingPdf, setLoadingPdf] = useState({});
     const [searchTerm, setSearchTerm] = useState('');
     const [dateRange, setDateRange] = useState({
         fromDate: '',
@@ -60,16 +66,12 @@ const TruckTransactionLedger = () => {
             const searchLower = searchValue.toLowerCase().trim();
 
             const filtered = trucksList.filter(truck => {
-                // Search in truck number
                 if (truck.truckNo?.toLowerCase().includes(searchLower)) {
                     return true;
                 }
-
-                // Search in driver name
                 if (truck.driver?.toLowerCase().includes(searchLower)) {
                     return true;
                 }
-
                 return false;
             });
 
@@ -121,7 +123,6 @@ const TruckTransactionLedger = () => {
 
             if (response.data.success) {
                 setLedgerData(response.data);
-                // Find and set the selected truck from trucks list
                 const truck = trucks.find(t => t.truckId === truckId);
                 setSelectedTruck(truck);
             } else {
@@ -132,6 +133,276 @@ const TruckTransactionLedger = () => {
             toast.error('Failed to load ledger data');
         } finally {
             setLoadingLedger(false);
+        }
+    };
+
+    // Fetch booking details and generate PDF
+    const generateBookingPDF = async (bookingId) => {
+        try {
+            setLoadingPdf(prev => ({ ...prev, [bookingId]: true }));
+
+            const response = await axios.get(`${API_URL}/booking/one/${bookingId}`);
+
+            if (!response.data.success) {
+                throw new Error('Failed to fetch booking details');
+            }
+
+            const bookingData = response.data.data;
+            const doc = new jsPDF();
+
+            // Header
+            doc.setFontSize(20);
+            doc.setTextColor(0, 51, 102);
+            doc.text('TRUCK BOOKING DETAILS', 105, 15, { align: 'center' });
+
+            doc.setFontSize(11);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Booking Ref No. #: ${bookingData.id}`, 105, 22, { align: 'center' });
+
+            const date = new Date().toLocaleDateString('en-IN');
+            doc.setFontSize(9);
+            doc.setTextColor(150, 150, 150);
+            doc.text(`Generated on: ${date}`, 105, 28, { align: 'center' });
+
+            let yPos = 40;
+
+            // Company Details
+            doc.setFontSize(11);
+            doc.setTextColor(0, 51, 102);
+            doc.text('Company:', 14, yPos);
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text(bookingData.company?.companyName || 'stc transport', 45, yPos);
+            yPos += 7;
+
+            // Bank Accounts
+            if (bookingData.company?.banks && bookingData.company.banks.length > 0) {
+                doc.setFontSize(11);
+                doc.setTextColor(0, 51, 102);
+                doc.text('Bank:', 14, yPos);
+                doc.setFontSize(9);
+                doc.setTextColor(80, 80, 80);
+                const bank = bookingData.company.banks[0];
+                doc.text(`${bank.acHolderName} - A/C: ${bank.accountNo} (${bank.branchName})`, 45, yPos);
+                yPos += 7;
+            }
+
+            yPos += 3;
+
+            // Booking Information
+            doc.setFontSize(12);
+            doc.setTextColor(0, 51, 102);
+            doc.text('Booking Information', 14, yPos);
+            yPos += 7;
+
+            // Two-column layout
+            const leftColumn = [
+                ['Booking ID:', bookingData.id],
+                ['Date:', formatDate(bookingData.date)],
+                ['Status:', bookingData.status || 'N/A'],
+                ['Type:', bookingData.bookingType || 'N/A'],
+                ['Commodity:', bookingData.commodity || 'N/A'],
+            ];
+
+            const rightColumn = [
+                ['Weight:', `${bookingData.weight || 0} ${bookingData.weightType || ''}`],
+                ['Rate:', `Rs. ${formatCurrency(bookingData.rate)}`],
+                ['From:', bookingData.fromLocation || 'N/A'],
+                ['To:', bookingData.toLocation || 'N/A'],
+            ];
+
+            doc.setFontSize(9);
+            leftColumn.forEach((item, index) => {
+                doc.setTextColor(60, 60, 60);
+                doc.text(item[0], 14, yPos + (index * 5));
+                doc.setTextColor(0, 0, 0);
+                doc.text(String(item[1]), 45, yPos + (index * 5));
+            });
+
+            rightColumn.forEach((item, index) => {
+                doc.setTextColor(60, 60, 60);
+                doc.text(item[0], 100, yPos + (index * 5));
+                doc.setTextColor(0, 0, 0);
+                doc.text(String(item[1]), 130, yPos + (index * 5));
+            });
+
+            yPos += (Math.max(leftColumn.length, rightColumn.length) * 5) + 10;
+
+            // Truck Details
+            doc.setFontSize(12);
+            doc.setTextColor(0, 51, 102);
+            doc.text('Truck Details', 14, yPos);
+            yPos += 7;
+
+            doc.setFontSize(9);
+            doc.setTextColor(60, 60, 60);
+            doc.text('Truck No:', 14, yPos);
+            doc.setTextColor(0, 0, 0);
+            doc.text(bookingData.truck?.truckNo || 'N/A', 45, yPos);
+            yPos += 5;
+
+            doc.setTextColor(60, 60, 60);
+            doc.text('Driver:', 14, yPos);
+            doc.setTextColor(0, 0, 0);
+            doc.text(bookingData.truck?.driverName || 'N/A', 45, yPos);
+            yPos += 5;
+
+            doc.setTextColor(60, 60, 60);
+            doc.text('Driver Phone:', 14, yPos);
+            doc.setTextColor(0, 0, 0);
+            doc.text(bookingData.truck?.driverPhone || 'N/A', 45, yPos);
+            yPos += 10;
+
+            // Freight Summary
+            const totalTruckPaid = bookingData.truckPayments?.reduce((sum, payment) =>
+                sum + parseFloat(payment.amount || 0), 0) || 0;
+            const truckFreight = parseFloat(bookingData.truckFreight || 0);
+            const truckBalance = truckFreight - totalTruckPaid;
+
+            doc.setFontSize(12);
+            doc.setTextColor(0, 51, 102);
+            doc.text('Freight Summary', 14, yPos);
+            yPos += 7;
+
+            doc.setFontSize(9);
+
+            // First row
+            doc.setTextColor(60, 60, 60);
+            doc.text('Truck Freight:', 14, yPos);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Rs. ${formatCurrency(truckFreight)}`, 50, yPos);
+
+            doc.setTextColor(60, 60, 60);
+            doc.text('Total Paid:', 85, yPos);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Rs. ${formatCurrency(totalTruckPaid)}`, 125, yPos);
+            yPos += 6;
+
+            // Second row
+            doc.setTextColor(60, 60, 60);
+            doc.text('Balance:', 14, yPos);
+            doc.setTextColor(truckBalance > 0 ? 220 : truckBalance < 0 ? 22 : 0,
+                truckBalance > 0 ? 38 : truckBalance < 0 ? 163 : 0,
+                truckBalance > 0 ? 38 : truckBalance < 0 ? 74 : 0);
+            doc.text(`Rs. ${formatCurrency(truckBalance)}`, 50, yPos);
+            yPos += 12;
+
+            // Truck Payments Table
+            if (bookingData.truckPayments && bookingData.truckPayments.length > 0) {
+                doc.setFontSize(12);
+                doc.setTextColor(0, 51, 102);
+                doc.text('Truck Payment History', 14, yPos);
+                yPos += 7;
+
+                const paymentRows = bookingData.truckPayments.map(payment => [
+                    formatDate(payment.paymentDate),
+                    `Rs. ${formatCurrency(payment.amount)}`,
+                    payment.paymentMode || 'N/A',
+                    payment.utrNo || '-',
+                    payment.remarks || '-',
+                    payment.paymentFor || 'N/A'
+                ]);
+
+                autoTable(doc, {
+                    startY: yPos,
+                    head: [['Date', 'Amount', 'Mode', 'UTR', 'Remarks', 'Payment For']],
+                    body: paymentRows,
+                    theme: 'striped',
+                    headStyles: { fillColor: [0, 51, 102], textColor: 255, fontSize: 9 },
+                    styles: { fontSize: 8, cellPadding: 2 },
+                    margin: { left: 14, right: 14 },
+                });
+
+                yPos = doc.lastAutoTable?.finalY + 10 || yPos + 30;
+            }
+
+            // Halting Charges Table
+            if (bookingData.haltings && bookingData.haltings.length > 0) {
+                doc.setFontSize(12);
+                doc.setTextColor(0, 51, 102);
+                doc.text('Halting Charges', 14, yPos);
+                yPos += 7;
+
+                const haltingRows = bookingData.haltings.map(halting => [
+                    formatDate(halting.haltingDate),
+                    halting.days,
+                    `Rs. ${formatCurrency(halting.pricePerDay)}`,
+                    `Rs. ${formatCurrency(halting.amount)}`,
+                    halting.reason || '-'
+                ]);
+
+                autoTable(doc, {
+                    startY: yPos,
+                    head: [['Date', 'Days', 'Price/Day', 'Total', 'Reason']],
+                    body: haltingRows,
+                    theme: 'striped',
+                    headStyles: { fillColor: [0, 51, 102], textColor: 255, fontSize: 9 },
+                    styles: { fontSize: 8, cellPadding: 2 },
+                    margin: { left: 14, right: 14 },
+                });
+
+                yPos = doc.lastAutoTable?.finalY + 10 || yPos + 30;
+            }
+
+            // Commissions Table
+            if (bookingData.commissions && bookingData.commissions.length > 0) {
+                doc.setFontSize(12);
+                doc.setTextColor(0, 51, 102);
+                doc.text('Commission Details', 14, yPos);
+                yPos += 7;
+
+                const commissionRows = bookingData.commissions.map(commission => [
+                    commission.commissionType || 'N/A',
+                    `Rs. ${formatCurrency(commission.amount)}`,
+                    commission.paymentMode || 'N/A',
+                    commission.utrNo || '-',
+                    formatDate(commission.paymentDate),
+                    commission.remark || '-'
+                ]);
+
+                autoTable(doc, {
+                    startY: yPos,
+                    head: [['Type', 'Amount', 'Mode', 'UTR No.', 'Date', 'Remark']],
+                    body: commissionRows,
+                    theme: 'striped',
+                    headStyles: { fillColor: [0, 51, 102], textColor: 255, fontSize: 9 },
+                    styles: { fontSize: 8, cellPadding: 2 },
+                    margin: { left: 14, right: 14 },
+                });
+
+                yPos = doc.lastAutoTable?.finalY + 10 || yPos + 30;
+            }
+
+            // Footer
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(150, 150, 150);
+                doc.text(
+                    `Generated by ${bookingData.company?.companyName || 'stc transport'}, ${new Date().toLocaleDateString('en-IN')}`,
+                    105,
+                    doc.internal.pageSize.height - 10,
+                    { align: 'center' }
+                );
+                doc.text(
+                    `Page ${i} of ${pageCount}`,
+                    doc.internal.pageSize.width - 20,
+                    doc.internal.pageSize.height - 10
+                );
+            }
+
+            // Save PDF
+            const fileName = `Truck_Booking_${bookingData.id}_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(fileName);
+
+            toast.success('PDF generated successfully');
+
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            toast.error(`Failed to generate PDF: ${error.message}`);
+        } finally {
+            setLoadingPdf(prev => ({ ...prev, [bookingId]: false }));
         }
     };
 
@@ -177,16 +448,18 @@ const TruckTransactionLedger = () => {
     const calculateTruckStats = () => {
         let totalTrucks = 0;
         let totalFreight = 0;
+        let totalHalting = 0;
         let totalCommission = 0;
-        let totalNetPayable = 0;
+        let totalPayable = 0;
         let totalBalance = 0;
         let totalPaidAmount = 0;
 
         if (Array.isArray(filteredTrucks)) {
             totalTrucks = filteredTrucks.length;
             totalFreight = filteredTrucks.reduce((sum, truck) => sum + (truck.totalFreight || 0), 0);
+            totalHalting = filteredTrucks.reduce((sum, truck) => sum + (truck.totalHalting || 0), 0);
             totalCommission = filteredTrucks.reduce((sum, truck) => sum + (truck.totalCommission || 0), 0);
-            totalNetPayable = filteredTrucks.reduce((sum, truck) => sum + (truck.netPayable || 0), 0);
+            totalPayable = filteredTrucks.reduce((sum, truck) => sum + (truck.totalPayable || 0), 0);
             totalBalance = filteredTrucks.reduce((sum, truck) => sum + (truck.balance || 0), 0);
             totalPaidAmount = filteredTrucks.reduce((sum, truck) => sum + (truck.totalPaid || 0), 0);
         }
@@ -194,8 +467,9 @@ const TruckTransactionLedger = () => {
         return {
             totalTrucks,
             totalFreight,
+            totalHalting,
             totalCommission,
-            totalNetPayable,
+            totalPayable,
             totalBalance,
             totalPaidAmount
         };
@@ -220,6 +494,7 @@ const TruckTransactionLedger = () => {
             worksheetData.push(['Driver:', ledgerData.truck.driverName]);
             worksheetData.push(['Opening Balance:', formatCurrency(ledgerData.openingBalance)]);
             worksheetData.push(['Closing Balance:', formatCurrency(ledgerData.closingBalance)]);
+            worksheetData.push(['Closing Balance Type:', ledgerData.closingBalanceType]);
             worksheetData.push(['']);
 
             // Add table headers
@@ -256,7 +531,7 @@ const TruckTransactionLedger = () => {
             // Set column widths
             const wscols = [
                 { wch: 12 }, // Date
-                { wch: 40 }, // Particulars
+                { wch: 50 }, // Particulars
                 { wch: 15 }, // Voucher Type
                 { wch: 12 }, // Voucher No
                 { wch: 15 }, // Debit
@@ -317,6 +592,7 @@ const TruckTransactionLedger = () => {
                         <div class="info"><strong>Driver:</strong> ${ledgerData.truck.driverName}</div>
                         <div class="info"><strong>Opening Balance:</strong> ₹${formatCurrency(ledgerData.openingBalance)}</div>
                         <div class="info"><strong>Closing Balance:</strong> ₹${formatCurrency(ledgerData.closingBalance)}</div>
+                        <div class="info"><strong>Closing Balance Type:</strong> ${ledgerData.closingBalanceType}</div>
                     </div>
                     <table>
                         <thead>
@@ -341,7 +617,7 @@ const TruckTransactionLedger = () => {
                                     <td>${entry.voucherNo}</td>
                                     <td class="debit">${entry.debit ? '₹' + formatCurrency(entry.debit) : ''}</td>
                                     <td class="credit">${entry.credit ? '₹' + formatCurrency(entry.credit) : ''}</td>
-                                    <td>${entry.commission ? '₹' + formatCurrency(entry.commission) : ''}</td>
+                                    <td class="commission">${entry.commission ? '₹' + formatCurrency(entry.commission) : ''}</td>
                                     <td class="balance">₹${formatCurrency(entry.balance)}</td>
                                     <td>${entry.balanceType}</td>
                                 </tr>
@@ -360,12 +636,13 @@ const TruckTransactionLedger = () => {
 
     // Calculate totals
     const calculateTotals = () => {
-        if (!ledgerData || !ledgerData.ledger) return { totalDebit: 0, totalCredit: 0 };
+        if (!ledgerData || !ledgerData.ledger) return { totalDebit: 0, totalCredit: 0, totalCommission: 0 };
 
         const totalDebit = ledgerData.ledger.reduce((sum, entry) => sum + (entry.debit || 0), 0);
         const totalCredit = ledgerData.ledger.reduce((sum, entry) => sum + (entry.credit || 0), 0);
+        const totalCommission = ledgerData.ledger.reduce((sum, entry) => sum + (entry.commission || 0), 0);
 
-        return { totalDebit, totalCredit };
+        return { totalDebit, totalCredit, totalCommission };
     };
 
     const totals = calculateTotals();
@@ -418,8 +695,8 @@ const TruckTransactionLedger = () => {
                 </div>
             </div>
 
-            {/* Stats Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            {/* Stats Summary - Updated with new fields */}
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
                 <div className="bg-white p-4 rounded-lg border border-gray-200">
                     <div className="flex items-center">
                         <div className="p-2 bg-blue-100 rounded-lg mr-3">
@@ -434,10 +711,10 @@ const TruckTransactionLedger = () => {
                     </div>
                 </div>
 
-                {/* <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
                     <div className="flex items-center">
                         <div className="p-2 bg-orange-100 rounded-lg mr-3">
-                            <Wallet className="w-5 h-5 text-orange-600" />
+                            <IndianRupee className="w-5 h-5 text-orange-600" />
                         </div>
                         <div>
                             <p className="text-sm text-gray-600">Total Freight</p>
@@ -446,7 +723,21 @@ const TruckTransactionLedger = () => {
                             </p>
                         </div>
                     </div>
-                </div> */}
+                </div>
+
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                    <div className="flex items-center">
+                        <div className="p-2 bg-yellow-100 rounded-lg mr-3">
+                            <Clock className="w-5 h-5 text-yellow-600" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-600">Total Halting</p>
+                            <p className="text-lg font-bold text-gray-800">
+                                ₹{formatCurrency(stats.totalHalting)}
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
                 <div className="bg-white p-4 rounded-lg border border-gray-200">
                     <div className="flex items-center">
@@ -454,7 +745,7 @@ const TruckTransactionLedger = () => {
                             <Percent className="w-5 h-5 text-purple-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-gray-600">Total Commission Received</p>
+                            <p className="text-sm text-gray-600">Total Commission</p>
                             <p className="text-lg font-bold text-gray-800">
                                 ₹{formatCurrency(stats.totalCommission)}
                             </p>
@@ -462,19 +753,6 @@ const TruckTransactionLedger = () => {
                     </div>
                 </div>
 
-                <div className="bg-white p-4 rounded-lg border border-gray-200">
-                    <div className="flex items-center">
-                        <div className="p-2 bg-green-100 rounded-lg mr-3">
-                            <Wallet className="w-5 h-5 text-orange-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-600">Net Payable</p>
-                            <p className="text-lg font-bold text-gray-800">
-                                ₹{formatCurrency(stats.totalNetPayable)}
-                            </p>
-                        </div>
-                    </div>
-                </div>
                 <div className="bg-white p-4 rounded-lg border border-gray-200">
                     <div className="flex items-center">
                         <div className="p-2 bg-green-100 rounded-lg mr-3">
@@ -495,7 +773,7 @@ const TruckTransactionLedger = () => {
                             <Receipt className="w-5 h-5 text-red-600" />
                         </div>
                         <div>
-                            <p className="text-sm text-gray-600">Total Payable Balance</p>
+                            <p className="text-sm text-gray-600">Total Balance</p>
                             <p className="text-lg font-bold text-gray-800">
                                 ₹{formatCurrency(stats.totalBalance)}
                             </p>
@@ -515,7 +793,7 @@ const TruckTransactionLedger = () => {
                                 placeholder="Search by truck number or driver name..."
                                 value={searchTerm}
                                 onChange={handleSearchChange}
-                                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             />
                             {searchTerm && (
                                 <button
@@ -526,9 +804,9 @@ const TruckTransactionLedger = () => {
                                 </button>
                             )}
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">
+                        {/* <p className="text-xs text-gray-500 mt-2">
                             Search across truck numbers and driver names
-                        </p>
+                        </p> */}
                     </div>
 
                     <div className="flex flex-wrap gap-2">
@@ -620,12 +898,18 @@ const TruckTransactionLedger = () => {
                                                     </div>
                                                 </div>
 
-                                                {/* Truck Financial Summary */}
-                                                <div className="grid grid-cols-2 gap-2 mb-2">
+                                                {/* Truck Financial Summary - Updated */}
+                                                <div className="grid grid-cols-3 gap-1 mb-2">
                                                     <div className="text-center">
                                                         <p className="text-xs text-gray-500">Freight</p>
                                                         <p className="text-xs font-bold text-orange-700">
                                                             ₹{formatCurrency(truck.totalFreight || 0)}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <p className="text-xs text-gray-500">Halting</p>
+                                                        <p className="text-xs font-bold text-yellow-700">
+                                                            ₹{formatCurrency(truck.totalHalting || 0)}
                                                         </p>
                                                     </div>
                                                     <div className="text-center">
@@ -638,9 +922,9 @@ const TruckTransactionLedger = () => {
 
                                                 <div className="grid grid-cols-2 gap-2">
                                                     <div className="text-center">
-                                                        <p className="text-xs text-gray-500">Net Payable</p>
+                                                        <p className="text-xs text-gray-500">Payable</p>
                                                         <p className="text-xs font-bold text-green-700">
-                                                            ₹{formatCurrency(truck.netPayable || 0)}
+                                                            ₹{formatCurrency(truck.totalPayable || 0)}
                                                         </p>
                                                     </div>
                                                     <div className="text-center">
@@ -686,94 +970,98 @@ const TruckTransactionLedger = () => {
                         </div>
                     ) : (
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                            {/* Ledger Header */}
+                            {/* Ledger Header - Updated */}
                             <div className="p-6 border-b border-gray-200">
-                                <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+                                <div className=" justify-between mb-6">
                                     <div>
-                                        <div className="flex items-center space-x-3 mb-2">
-                                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                                                <Truck className="w-6 h-6 text-blue-600" />
-                                            </div>
-                                            <div>
-                                                <h2 className="text-2xl font-bold text-gray-900">
-                                                    {selectedTruck.truckNo}
-                                                </h2>
-                                                <div className="flex items-center space-x-2 text-gray-600">
-                                                    <UserCircle className="w-4 h-4" />
-                                                    <span>{selectedTruck.driver || 'N/A'}</span>
+                                        <div className="flex justify-between space-x-3 mb-2">
+                                            <div className='flex gap-4  items-center'>
+                                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                                    <Truck className="w-6 h-6 text-blue-600" />
                                                 </div>
+                                                <div>
+                                                    <h2 className="text-2xl font-bold text-gray-900">
+                                                        {selectedTruck.truckNo}
+                                                    </h2>
+                                                    <div className="flex items-center space-x-2 text-gray-600">
+                                                        <UserCircle className="w-4 h-4" />
+                                                        <span>{selectedTruck.driver || 'N/A'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex space-x-2 mt-4 md:mt-0">
+                                                <div className="flex items-center space-x-2">
+                                                    <Calendar className="w-4 h-4 text-gray-500" />
+                                                    <input
+                                                        type="date"
+                                                        value={dateRange.fromDate}
+                                                        onChange={(e) => setDateRange({ ...dateRange, fromDate: e.target.value })}
+                                                        className="px-3 py-1.5 border border-gray-300 rounded text-sm"
+                                                    />
+                                                    <span className="text-gray-500">to</span>
+                                                    <input
+                                                        type="date"
+                                                        value={dateRange.toDate}
+                                                        onChange={(e) => setDateRange({ ...dateRange, toDate: e.target.value })}
+                                                        className="px-3 py-1.5 border border-gray-300 rounded text-sm"
+                                                    />
+                                                    <div>
+                                                        <button
+                                                            onClick={() => fetchTruckLedger(selectedTruck.truckId)}
+                                                            className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center space-x-1"
+                                                        >
+                                                            <Filter className="w-4 h-4" />
+                                                            <span>Apply</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
                                             </div>
                                         </div>
 
-                                        {/* Truck Summary */}
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+
+
+                                        {/* Truck Summary - Updated */}
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
                                             <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
-                                                <p className="text-xs text-orange-700 mb-1">Total Freight</p>
+                                                <p className="text-xs text-orange-700 mb-1">Freight</p>
                                                 <p className="text-lg font-bold text-orange-900">
                                                     ₹{formatCurrency(selectedTruck.totalFreight || 0)}
                                                 </p>
                                             </div>
+                                            <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                                                <p className="text-xs text-yellow-700 mb-1">Halting</p>
+                                                <p className="text-lg font-bold text-yellow-900">
+                                                    ₹{formatCurrency(selectedTruck.totalHalting || 0)}
+                                                </p>
+                                            </div>
                                             <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-                                                <p className="text-xs text-purple-700 mb-1">Total Commission</p>
+                                                <p className="text-xs text-purple-700 mb-1">Commission</p>
                                                 <p className="text-lg font-bold text-purple-900">
                                                     ₹{formatCurrency(selectedTruck.totalCommission || 0)}
                                                 </p>
                                             </div>
                                             <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                                                <p className="text-xs text-green-700 mb-1">Net Payable</p>
+                                                <p className="text-xs text-green-700 mb-1">Payable</p>
                                                 <p className="text-lg font-bold text-green-900">
-                                                    ₹{formatCurrency(selectedTruck.netPayable || 0)}
+                                                    ₹{formatCurrency(selectedTruck.totalPayable || 0)}
                                                 </p>
                                             </div>
                                             <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                                                <p className="text-xs text-blue-700 mb-1">Total Paid</p>
+                                                <p className="text-xs text-blue-700 mb-1">Paid</p>
                                                 <p className="text-lg font-bold text-blue-900">
                                                     ₹{formatCurrency(selectedTruck.totalPaid || 0)}
                                                 </p>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex space-x-2 mt-4 md:mt-0">
-                                        <div className="flex items-center space-x-2">
-                                            <Calendar className="w-4 h-4 text-gray-500" />
-                                            <input
-                                                type="date"
-                                                value={dateRange.fromDate}
-                                                onChange={(e) => setDateRange({ ...dateRange, fromDate: e.target.value })}
-                                                className="px-3 py-1.5 border border-gray-300 rounded text-sm"
-                                            />
-                                            <span className="text-gray-500">to</span>
-                                            <input
-                                                type="date"
-                                                value={dateRange.toDate}
-                                                onChange={(e) => setDateRange({ ...dateRange, toDate: e.target.value })}
-                                                className="px-3 py-1.5 border border-gray-300 rounded text-sm"
-                                            />
-                                        </div>
-                                        <button
-                                            onClick={() => fetchTruckLedger(selectedTruck.truckId)}
-                                            className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center space-x-1"
-                                        >
-                                            <Filter className="w-4 h-4" />
-                                            <span>Apply</span>
-                                        </button>
-                                    </div>
+
                                 </div>
+
 
                                 {/* Summary Cards */}
                                 {ledgerData && (
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                        {/* <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-sm text-blue-700 mb-1">Opening Balance</p>
-                                                    <p className="text-xl font-bold text-blue-900">
-                                                        ₹{formatCurrency(ledgerData.openingBalance)}
-                                                    </p>
-                                                </div>
-                                                <Wallet className="w-8 h-8 text-blue-500" />
-                                            </div>
-                                        </div> */}
                                         <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                                             <div className="flex items-center justify-between">
                                                 <div>
@@ -799,7 +1087,23 @@ const TruckTransactionLedger = () => {
                                         <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <p className="text-sm text-purple-700 mb-1">Closing Balance</p>
+                                                    <p className="text-sm text-purple-700 mb-1">Total Commission</p>
+                                                    <p className="text-xl font-bold text-purple-900">
+                                                        ₹{formatCurrency(totals.totalCommission)}
+                                                    </p>
+                                                </div>
+                                                <Percent className="w-8 h-8 text-purple-500" />
+                                            </div>
+                                        </div>
+                                        <div className={`p-4 rounded-lg border ${ledgerData.closingBalance > 0
+                                            ? 'bg-red-50 border-red-200'
+                                            : ledgerData.closingBalance < 0
+                                                ? 'bg-green-50 border-green-200'
+                                                : 'bg-purple-50 border-purple-200'
+                                            }`}>
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-sm text-gray-600 mb-1">Closing Balance</p>
                                                     <p className={`text-xl font-bold ${ledgerData.closingBalance > 0
                                                         ? 'text-red-900'
                                                         : ledgerData.closingBalance < 0
@@ -814,11 +1118,10 @@ const TruckTransactionLedger = () => {
                                                             ? 'bg-green-100 text-green-800'
                                                             : 'bg-purple-100 text-purple-800'
                                                         }`}>
-                                                        {ledgerData.closingBalance > 0 ? 'To Receive' :
-                                                            ledgerData.closingBalance < 0 ? 'To Pay' : 'Settled'}
+                                                        {ledgerData.closingBalanceType === 'Dr' ? 'To Receive' : 'To Pay'}
                                                     </span>
                                                 </div>
-                                                <CreditCard className="w-8 h-8 text-purple-500" />
+                                                <CreditCard className="w-8 h-8 text-gray-500" />
                                             </div>
                                         </div>
                                     </div>
@@ -876,12 +1179,17 @@ const TruckTransactionLedger = () => {
                                                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                             Credit (₹)
                                                         </th>
-                                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commission </th>
+                                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Commission (₹)
+                                                        </th>
                                                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                             Balance (₹)
                                                         </th>
                                                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                             Type
+                                                        </th>
+                                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Action
                                                         </th>
                                                     </tr>
                                                 </thead>
@@ -911,7 +1219,11 @@ const TruckTransactionLedger = () => {
                                                                     ? 'bg-blue-100 text-blue-800'
                                                                     : entry.voucherType === 'Payment'
                                                                         ? 'bg-green-100 text-green-800'
-                                                                        : 'bg-yellow-100 text-yellow-800'
+                                                                        : entry.voucherType === 'Commission'
+                                                                            ? 'bg-purple-100 text-purple-800'
+                                                                            : entry.voucherType === 'Halting'
+                                                                                ? 'bg-yellow-100 text-yellow-800'
+                                                                                : 'bg-gray-100 text-gray-800'
                                                                     }`}>
                                                                     {entry.voucherType}
                                                                 </span>
@@ -960,6 +1272,22 @@ const TruckTransactionLedger = () => {
                                                                     {entry.balanceType}
                                                                 </span>
                                                             </td>
+                                                            <td className="py-3 px-4">
+                                                                {entry.voucherType === 'Booking' && (
+                                                                    <button
+                                                                        onClick={() => generateBookingPDF(entry.voucherNo)}
+                                                                        disabled={loadingPdf[entry.voucherNo]}
+                                                                        className="text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                                                        title="Download Booking PDF"
+                                                                    >
+                                                                        {loadingPdf[entry.voucherNo] ? (
+                                                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                                                                        ) : (
+                                                                            <FileDown className="w-4 h-4" />
+                                                                        )}
+                                                                    </button>
+                                                                )}
+                                                            </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
@@ -988,6 +1316,12 @@ const TruckTransactionLedger = () => {
                                                             ₹{formatCurrency(totals.totalCredit)}
                                                         </span>
                                                     </div>
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-sm text-gray-600 mr-4">Total Commission:</span>
+                                                        <span className="text-sm font-bold text-purple-700">
+                                                            ₹{formatCurrency(totals.totalCommission)}
+                                                        </span>
+                                                    </div>
                                                     <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                                                         <span className="text-base font-semibold text-gray-800 mr-4">
                                                             Closing Balance:
@@ -999,6 +1333,9 @@ const TruckTransactionLedger = () => {
                                                                 : 'text-gray-700'
                                                             }`}>
                                                             ₹{formatCurrency(ledgerData.closingBalance)}
+                                                        </span>
+                                                        <span className="ml-2 text-xs text-gray-500">
+                                                            ({ledgerData.closingBalanceType})
                                                         </span>
                                                     </div>
                                                 </div>

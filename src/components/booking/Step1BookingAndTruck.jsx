@@ -526,19 +526,32 @@ const Step1BookingAndTruck = ({ formData, handleChange, handleCalculate, calcula
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Weight Type *</label>
-                                <select
-                                    name="weightType"
-                                    value={formData.weightType}
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Unloading Weight</label>
+                                <input
+                                    type="number"
+                                    name="unloadingWeight"
+                                    value={formData.unloadingWeight}
                                     onChange={handleChange}
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
                                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                                    required
-                                >
-                                    <option value="kg">Kilograms (kg)</option>
-                                    <option value="quintal">Quintal</option>
-                                    <option value="ton">Ton</option>
-                                </select>
+                                />
                             </div>
+                        </div>
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Weight Type *</label>
+                            <select
+                                name="weightType"
+                                value={formData.weightType}
+                                onChange={handleChange}
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                required
+                            >
+                                <option value="kg">Kilograms (kg)</option>
+                                <option value="quintal">Quintal</option>
+                                <option value="ton">Ton</option>
+                            </select>
                         </div>
                     </div>
                 </div>

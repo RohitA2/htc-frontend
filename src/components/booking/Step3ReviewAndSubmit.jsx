@@ -27,21 +27,21 @@ const Step3ReviewAndSubmit = ({ formData, calculations = {} }) => {
     switch (formData.commissionType) {
       case 'party': return 'From Party (Deducted)';
       case 'truck': return 'From Truck Owner/Driver';
-      case 'bank':  return 'Bank / Other';
-      case 'free':  return 'Free / No Commission';
-      default:      return 'Not Specified';
+      case 'bank': return 'Bank / Other';
+      case 'free': return 'Free / No Commission';
+      default: return 'Not Specified';
     }
   };
 
   const isTruckCommission = formData.commissionType === 'truck';
-  
+
   // Calculate simplified amounts
   const partyFreight = Number(calculations.partyFreight) || 0;
   const truckFreight = Number(calculations.truckFreight) || 0;
   const commissionAmount = Number(calculations.commissionAmount) || 0;
   const initialPaymentFromParty = Number(formData.initialPaymentFromParty) || 0;
   const initialPaymentToTruck = Number(formData.initialPaymentToTruck) || 0;
-  
+
   const partyReceivable = partyFreight - initialPaymentFromParty;
   const truckPayable = truckFreight - (isTruckCommission ? commissionAmount : 0) - initialPaymentToTruck;
   const netBalance = partyReceivable - truckPayable;
@@ -224,16 +224,16 @@ const Step3ReviewAndSubmit = ({ formData, calculations = {} }) => {
           {/* Remarks */}
           {(formData.commissionRemark || formData.diffRemark) && (
             <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h4 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">Remarks</h4>
+              <h4 className="text-lg font-semibold mb-4 text-gray-500 dark:text-gray-400">Remarks</h4>
               {formData.commissionRemark && (
                 <div className="mb-4">
-                  <p className="font-medium text-gray-800 dark:text-gray-200">Commission:</p>
+                  <p className="font-medium text-gray-500 dark:text-gray-400">Commission:</p>
                   <p className="text-gray-600 dark:text-gray-400 mt-1">{formData.commissionRemark}</p>
                 </div>
               )}
               {formData.diffRemark && (
                 <div>
-                  <p className="font-medium text-gray-800 dark:text-gray-200">Difference:</p>
+                  <p className="font-medium text-gray-500 dark:text-gray-400">Difference:</p>
                   <p className="text-gray-600 dark:text-gray-400 mt-1">{formData.diffRemark}</p>
                 </div>
               )}

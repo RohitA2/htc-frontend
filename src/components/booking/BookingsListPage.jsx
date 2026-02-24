@@ -3,6 +3,7 @@ import axios from 'axios';
 import moment from 'moment';
 import BookingForm from './BookingForm';
 import BiltyForm from '../bilty/BiltyForm';
+import ChallanModal from '../challan/ChallanModal';
 import {
     PlusIcon,
     MagnifyingGlassIcon,
@@ -56,6 +57,12 @@ const BookingsListPage = () => {
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const [deleteModalVisible, setDeleteModalVisible] = useState(false);
     const [bookingToDelete, setBookingToDelete] = useState(null);
+
+    // Challan Modal state
+    const [showChallanModal, setShowChallanModal] = useState(false);
+    const [selectedBookingForChallan, setSelectedBookingForChallan] = useState(null);
+    const [challanData, setChallanData] = useState(null);
+    const [isEditChallanMode, setIsEditChallanMode] = useState(false);
 
     // Refs for closing dropdown when clicking outside
     const dropdownRefs = useRef({});
@@ -126,7 +133,6 @@ const BookingsListPage = () => {
             });
         } catch (error) {
             console.error('Error fetching bookings:', error);
-            message.error(error?.response?.data?.message || 'Failed to fetch bookings');
             toast.error(error?.response?.data?.message || 'Failed to fetch bookings');
         } finally {
             setLoading(false);
@@ -196,28 +202,56 @@ const BookingsListPage = () => {
             return;
         }
 
-        const exportData = bookings.map(booking => ({
-            'Booking ID': booking.id,
-            'Date': moment(booking.date).format('DD/MM/YYYY'),
-            'Party': booking.party?.partyName || '',
-            'Party Phone': booking.party?.partyPhone || '',
-            'Truck No': booking.truck?.truckNo || '',
-            'Driver': booking.truck?.driverName || '',
-            'Driver Phone': booking.truck?.driverPhone || '',
-            'From': booking.fromLocation || '',
-            'To': booking.toLocation || '',
-            'Commodity': booking.commodity || '',
-            'Weight': `${booking.weight || 0} ${booking.weightType || ''}`,
-            'Party Rate': booking.rate || 0,
-            'Truck Rate': booking.truckFreight && booking.weight ?
-                (parseFloat(booking.truckFreight) / parseFloat(booking.weight)).toFixed(2) : 0,
-            'Party Freight': booking.partyFreight || '0.00',
-            'Truck Freight': booking.truckFreight || '0.00',
-            'Difference': booking.differenceAmount || '0.00',
-            'Commission': calculateTotalCommission(booking.commissions).toFixed(2),
-            'Status': booking.status || '',
-            'Created By': booking.updatedByUser?.fullName || ''
-        }));
+        const exportData = bookings.map(booking => {
+            // Extract bank details from truckPayments (first entry)
+            const truckPayment = booking.truckPayments && booking.truckPayments.length > 0
+                ? booking.truckPayments[0]
+                : {};
+
+            // Extract commission bank details (first commission)
+            const commission = booking.commissions && booking.commissions.length > 0
+                ? booking.commissions[0]
+                : {};
+
+            // Extract party payment bank details (first party payment)
+            const partyPayment = booking.partyPayments && booking.partyPayments.length > 0
+                ? booking.partyPayments[0]
+                : {};
+
+            return {
+                'Booking ID': booking.id,
+                'Date': moment(booking.date).format('DD/MM/YYYY'),
+                'Party': booking.party?.partyName || '',
+                'Party Phone': booking.party?.partyPhone || '',
+                'Truck No': booking.truck?.truckNo || '',
+                'Driver': booking.truck?.driverName || '',
+                'Driver Phone': booking.truck?.driverPhone || '',
+                'From': booking.fromLocation || '',
+                'To': booking.toLocation || '',
+                'Commodity': booking.commodity || '',
+                'Weight': `${booking.weight || 0} ${booking.weightType || ''}`,
+                'unloadingWeight': `${booking.unloadingWeight || 0} ${booking.weightType || ''}`,
+                'Party Rate': booking.rate || 0,
+                'Truck Rate': booking.truckRate || (booking.truckFreight && booking.weight ?
+                    (parseFloat(booking.truckFreight) / parseFloat(booking.weight)).toFixed(2) : 0),
+                'Party Freight': booking.partyFreight || '0.00',
+                'Truck Freight': booking.truckFreight || '0.00',
+                'Difference': booking.differenceAmount || '0.00',
+                'Commission Amount': calculateTotalCommission(booking.commissions).toFixed(2),
+                'Status': booking.status || '',
+                'Created By': booking.updatedByUser?.fullName || '',
+
+                // Truck Payment Bank Details
+                'Truck Payment Bank Account': truckPayment.bankAccountNo || '',
+                'Truck Payment Bank Name': truckPayment.bankName || '',
+                'Truck Payment IFSC Code': truckPayment.ifscCode || '',
+                'Truck Payment Account Holder': truckPayment.bankAcHolderName || '',
+                'Truck Payment UTR': truckPayment.utrNo || '',
+                'Truck Payment PAN': truckPayment.PanNumber || '',
+                'Truck Payment Amount': truckPayment.amount || '',
+                'Truck Payment Mode': truckPayment.paymentMode || '',
+            };
+        });
 
         const csvContent = convertToCSV(exportData);
         downloadCSV(csvContent, `bookings_export_${moment().format('YYYYMMDD_HHmmss')}.csv`);
@@ -294,6 +328,19 @@ const BookingsListPage = () => {
         setSlipPreviewVisible(true);
     };
 
+    // Check if challan exists for booking
+    const checkChallanExists = async (bookingId) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${API_URL}/challans/booking/${bookingId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            return response.data.data;
+        } catch (error) {
+            return null;
+        }
+    };
+
     // Action handlers
     const handleEdit = (booking) => {
         setEditingBooking(booking);
@@ -328,8 +375,42 @@ const BookingsListPage = () => {
         }
     };
 
-    const handleChallanInfo = (bookingId) => {
-        window.location.href = `/bookings/challan/${bookingId}`;
+    const handleChallanInfo = async (booking) => {
+        setOpenDropdownId(null);
+        setSelectedBookingForChallan(booking);
+
+        // Check if challan already exists
+        const existingChallan = await checkChallanExists(booking.id);
+
+        if (existingChallan) {
+            // Edit existing challan
+            setChallanData(existingChallan);
+            setIsEditChallanMode(true);
+        } else {
+            // Create new challan with prefilled data
+            const prefilledData = {
+                challanNo: `CH-${booking.id}-${moment().format('YYYYMMDD')}`,
+                date: moment().format('YYYY-MM-DD'),
+                truckNo: booking.truck?.truckNo || '',
+                driverName: booking.truck?.driverName || '',
+                driverMobileNo: booking.truck?.driverPhone || '',
+                partyName: booking.party?.partyName || '',
+                lastLoadingFrom: booking.fromLocation || '',
+                lastUnloadingTo: booking.toLocation || '',
+                // Add more prefilled data as needed
+            };
+            setChallanData(prefilledData);
+            setIsEditChallanMode(false);
+        }
+
+        setShowChallanModal(true);
+    };
+
+    const handleChallanSuccess = () => {
+        setShowChallanModal(false);
+        setChallanData(null);
+        setIsEditChallanMode(false);
+        toast.success(isEditChallanMode ? 'Challan updated successfully!' : 'Challan created successfully!');
     };
 
     const handleCloseBookingForm = () => {
@@ -353,7 +434,7 @@ const BookingsListPage = () => {
     // Status color mapping
     const statusColors = {
         pending: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
-        completed: 'bg-green-100 text-green-800 border border-green-200',
+        complete: 'bg-green-100 text-green-800 border border-green-200',
         cancelled: 'bg-red-100 text-red-800 border border-red-200',
         in_transit: 'bg-blue-100 text-blue-800 border border-blue-200',
         delivered: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
@@ -396,11 +477,9 @@ const BookingsListPage = () => {
     const columns = [
         {
             key: 'id',
-            title: 'Booking ID',
-            render: (booking) => (
-                <span className="font-semibold text-gray-800">#{booking.id}</span>
-            ),
-            className: 'min-w-[80px] max-w-[100px] whitespace-nowrap'
+            title: 'ID',
+            render: (booking) => <span className="font-semibold text-gray-800 text-sm">#{booking.id}</span>,
+            className: 'w-16 flex-shrink-0 px-0'
         },
         {
             key: 'date',
@@ -410,139 +489,137 @@ const BookingsListPage = () => {
                     {booking.date ? moment(booking.date).format('DD/MM/YY') : '-'}
                 </div>
             ),
-            className: 'min-w-[80px] max-w-[100px] whitespace-nowrap'
+            className: 'w-20 flex-shrink-0 px-0'
         },
         {
             key: 'party',
             title: 'Party',
             render: (booking) => (
-                <div className="min-w-37.5 max-w-50">
-                    <div className="font-medium text-gray-900 truncate" title={booking.party?.partyName || '-'}>
+                <div className="space-y-0.5">
+                    <div className="font-medium text-sm truncate" title={booking.party?.partyName || '-'}>
                         {booking.party?.partyName || '-'}
                     </div>
-                    <div className="text-xs text-gray-500 flex items-center gap-1 truncate">
+                    <div className="text-sm text-gray-500 flex items-center gap-1">
                         <PhoneIcon className="w-3 h-3 shrink-0" />
                         <span className="truncate">{booking.party?.partyPhone || '-'}</span>
                     </div>
                 </div>
             ),
-            className: 'min-w-[150px] max-w-[200px]'
+            className: 'w-24 flex-shrink-0 min-w-0 px-0'
         },
         {
             key: 'truckDriver',
-            title: 'Truck & Driver',
+            title: 'Truck/Driver',
             render: (booking) => (
-                <div className="min-w-37.5 max-w-50">
-                    <div className="font-medium text-gray-900 truncate" title={booking.truck?.truckNo || '-'}>
+                <div className="space-y-0.5">
+                    <div className="font-medium text-sm truncate" title={booking.truck?.truckNo || '-'}>
                         {booking.truck?.truckNo || '-'}
                     </div>
-                    <div className="text-xs text-gray-500 truncate">{booking.truck?.driverName || '-'}</div>
-                    <div className="text-xs text-gray-500 flex items-center gap-1 truncate">
+                    <div className="text-sm text-gray-500 truncate max-w-17.5">{booking.truck?.driverName || '-'}</div>
+                    <div className="text-sm text-gray-500 flex items-center gap-1">
                         <PhoneIcon className="w-3 h-3 shrink-0" />
-                        <span className="truncate">{booking.truck?.driverPhone || '-'}</span>
+                        <span className="truncate ">{booking.truck?.driverPhone || '-'}</span>
                     </div>
                 </div>
             ),
-            className: 'min-w-[150px] max-w-[200px]'
+            className: 'w-24 flex-shrink-0 min-w-0 px-0'
         },
         {
             key: 'route',
-            title: 'From - To',
+            title: 'Route',
             render: (booking) => (
-                <div className="min-w-30 max-w-45">
-                    <div className="text-sm text-gray-700 truncate" title={`${booking.fromLocation || '-'} → ${booking.toLocation || '-'}`}>
-                        {booking.fromLocation || '-'} → {booking.toLocation || '-'}
-                    </div>
+                <div className=" text-gray-700 flex items-center gap-1 truncate" title={`${booking.fromLocation || '-'} → ${booking.toLocation || '-'}`}>
+                    <span className="truncate font-medium">{booking.fromLocation || '-'}</span>
+                    <span className="text-gray-500">→</span>
+                    <span className="truncate">{booking.toLocation || '-'}</span>
                 </div>
             ),
-            className: 'min-w-[120px] max-w-[180px]'
+            className: 'w-20 flex-shrink-0 min-w-0 px-0'
         },
+
         {
             key: 'commodity',
             title: 'Commodity',
             render: (booking) => (
-                <div className="min-w-20 max-w-30">
-                    <span className="text-sm text-gray-700 truncate block" title={booking.commodity || '-'}>
-                        {booking.commodity || '-'}
-                    </span>
-                </div>
+                <span className="text-sm text-gray-700 block truncate " title={booking.commodity || '-'}>
+                    {booking.commodity || '-'}
+                </span>
             ),
-            className: 'min-w-[80px] max-w-[120px]'
+            className: 'w-20 flex-shrink-0 px-0'
         },
         {
             key: 'weight',
             title: 'Weight',
             render: (booking) => (
-                <div className="min-w-20 max-w-25">
-                    <span className="text-sm font-medium text-gray-800">
-                        {booking.weight || 0} {booking.weightType || ''}
-                    </span>
-                </div>
+                <span className="text-sm font-medium text-gray-800 whitespace-nowrap">
+                    {booking.weight || 0} {booking.weightType || ''}
+                </span>
             ),
-            className: 'min-w-[80px] max-w-[100px] whitespace-nowrap'
+            className: 'w-16 flex-shrink-0 px-0'
+        },
+        {
+            key: 'UnLoading Weight',
+            title: 'UnloadWeight',
+            render: (booking) => (
+                <span className="text-sm font-medium text-gray-800 whitespace-nowrap">
+                    {booking.unloadingWeight || 0} {booking.weightType || ''}
+                </span>
+            ),
+            className: 'w-16 flex-shrink-0 px-0'
         },
         {
             key: 'rates',
             title: 'Rates',
             render: (booking) => (
-                <div className="min-w-30 max-w-37.5 text-sm space-y-1">
-                    <div className="flex items-center gap-1 text-blue-600 truncate">
-                        <CurrencyDollarIcon className="w-3 h-3 shrink-0" />
-                        <span className="truncate">P: ₹{booking.rate ? parseFloat(booking.rate).toLocaleString('en-IN') : '0'}</span>
+                <div className="text-sm space-y-0.5 leading-tight">
+                    <div className="flex items-center gap-1 text-blue-600 text-[15px]">
+                        <CurrencyDollarIcon className="w-5 h-4 shrink-0" />P:
+                        <span>₹{booking.rate ? parseFloat(booking.rate).toLocaleString('en-IN') : '0'}</span>
                     </div>
-                    <div className="flex items-center gap-1 text-green-600 truncate">
-                        <CurrencyDollarIcon className="w-3 h-3 shrink-0" />
-                        <span className="truncate">T: ₹{calculateTruckRate(booking).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <div className="flex items-center gap-1 text-green-600 text-[15px]">
+                        <CurrencyDollarIcon className="w-5 h-4 shrink-0" />T:
+                        <span>₹{calculateTruckRate(booking).toLocaleString('en-IN', { maximumFractionDigits: 1 })}</span>
                     </div>
                 </div>
             ),
-            className: 'min-w-[120px] max-w-[150px]'
+            className: 'w-20 flex-shrink-0 px-0'
         },
         {
             key: 'freight',
             title: 'Freight',
             render: (booking) => (
-                <div className="min-w-30 max-w-37.5 space-y-1">
-                    <div className="text-sm text-blue-600 truncate">
-                        P: ₹{parseFloat(booking.partyFreight || 0).toLocaleString('en-IN')}
-                    </div>
-                    <div className="text-sm text-green-600 truncate">
-                        T: ₹{parseFloat(booking.truckFreight || 0).toLocaleString('en-IN')}
-                    </div>
+                <div className="text-sm space-y-0.5 leading-tight">
+                    <div className="text-blue-600 text-[15px] flex items-center"><CurrencyDollarIcon className="w-5 h-4 shrink-0" />P: ₹{parseFloat(booking.partyFreight || 0).toLocaleString('en-IN')}</div>
+                    <div className="text-green-600 text-[15px] flex items-center"><CurrencyDollarIcon className="w-5 h-4 shrink-0" />T: ₹{parseFloat(booking.truckFreight || 0).toLocaleString('en-IN')}</div>
                 </div>
             ),
-            className: 'min-w-[120px] max-w-[150px]'
+            className: 'w-20 flex-shrink-0 px-0'
         },
         {
             key: 'differenceAmount',
-            title: 'Difference',
+            title: 'Diff',
             render: (booking) => {
                 const numAmount = parseFloat(booking.differenceAmount || 0);
                 return (
-                    <div className="min-w-20 max-w-30">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${numAmount >= 0 ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'
-                            }`}>
-                            ₹{numAmount.toLocaleString('en-IN')}
-                        </span>
-                    </div>
+                    <span className={`px-1 py-0.5 rounded text-sm font-medium whitespace-nowrap ${numAmount >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        ₹{numAmount.toLocaleString('en-IN')}
+                    </span>
                 );
             },
-            className: 'min-w-[80px] max-w-[120px] whitespace-nowrap'
+            className: 'w-16 flex-shrink-0 px-0'
         },
         {
             key: 'commission',
-            title: 'Commission',
+            title: 'Comm',
             render: (booking) => {
                 const totalCommission = calculateTotalCommission(booking.commissions);
                 return (
-                    <div className="min-w-20 max-w-30">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-yellow-100 text-yellow-800 border border-yellow-200">
-                            ₹{totalCommission.toLocaleString('en-IN')}
-                        </span>
-                    </div>
+                    <span className="px-1 py-0.5 rounded text-sm font-medium bg-yellow-100 text-yellow-800 whitespace-nowrap">
+                        ₹{totalCommission.toLocaleString('en-IN')}
+                    </span>
                 );
             },
-            className: 'min-w-[80px] max-w-[120px] whitespace-nowrap'
+            className: 'w-16 flex-shrink-0 px-0'
         },
         {
             key: 'status',
@@ -551,92 +628,58 @@ const BookingsListPage = () => {
                 const status = booking.status || 'unknown';
                 const formattedStatus = status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
                 return (
-                    <div className="min-w-20 max-w-30">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${statusColors[status] || 'bg-gray-100 text-gray-800 border border-gray-200'
-                            }`}>
-                            {formattedStatus}
-                        </span>
-                    </div>
+                    <span className={`px-1 py-0.5 rounded text-sm font-medium whitespace-nowrap ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
+                        {formattedStatus}
+                    </span>
                 );
             },
-            className: 'min-w-[80px] max-w-[120px] whitespace-nowrap'
+            className: 'w-16 flex-shrink-0 px-0'
         },
         {
             key: 'actions',
             title: 'Actions',
             render: (booking) => (
-                <div className="relative" ref={el => dropdownRefs.current[booking.id] = el}>
+                <div className="relative w-full h-full" ref={el => dropdownRefs.current[booking.id] = el}>
                     <button
                         onClick={() => setOpenDropdownId(openDropdownId === booking.id ? null : booking.id)}
-                        className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-1 hover:bg-gray-100 rounded transition-colors w-full h-full flex items-center justify-center"
                         aria-label="Actions"
                     >
-                        <EllipsisVerticalIcon className="w-5 h-5 text-gray-600" />
+                        <EllipsisVerticalIcon className="w-4 h-4 text-gray-600" />
                     </button>
-
                     {openDropdownId === booking.id && (
-                        <div className="absolute right-0 mt-1 w-48 sm:w-56 md:w-64 bg-white rounded-lg shadow-xl z-50 border border-gray-200 overflow-hidden">
+                        <div className="absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-xl z-50 border border-gray-200 overflow-hidden min-w-55">
                             <div className="py-1 max-h-[calc(100vh-200px)] sm:max-h-96 overflow-y-auto custom-scrollbar">
-                                {/* Primary Actions */}
                                 <div className="px-2 py-1">
-                                    <button
-                                        onClick={() => handleEdit(booking)}
-                                        className="flex items-center w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                    >
+                                    <button onClick={() => handleEdit(booking)} className="flex items-center w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
                                         <PencilIcon className="w-4 h-4 mr-3 text-blue-600 shrink-0" />
                                         <span className="truncate">Edit Booking</span>
                                     </button>
-                                    <button
-                                        onClick={() => handleChallanInfo(booking.id)}
-                                        className="flex items-center w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                    >
+                                    <button onClick={() => handleChallanInfo(booking)} className="flex items-center w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
                                         <InformationCircleIcon className="w-4 h-4 mr-3 text-green-600 shrink-0" />
                                         <span className="truncate">Challan Info</span>
                                     </button>
-                                    <button
-                                        onClick={() => handleBiltyClick(booking)}
-                                        className="flex items-center w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                    >
+                                    <button onClick={() => handleBiltyClick(booking)} className="flex items-center w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
                                         <DocumentDuplicateIcon className="w-4 h-4 mr-3 text-purple-600 shrink-0" />
                                         <span className="truncate">Create/Edit Bilty</span>
                                     </button>
                                 </div>
-
                                 <div className="border-t my-1"></div>
-
-                                {/* PDF Generation Section */}
                                 <div className="px-2 py-1">
-                                    <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        Generate PDFs
-                                    </div>
-                                    <button
-                                        onClick={() => openSlipPreview(booking, 'difference')}
-                                        className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                    >
+                                    <div className="px-3 py-1 text-sm font-semibold text-gray-500 uppercase tracking-wider">Generate PDFs</div>
+                                    <button onClick={() => openSlipPreview(booking, 'difference')} className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
                                         <span className="ml-1 truncate">Difference Slip</span>
                                     </button>
-                                    <button
-                                        onClick={() => openSlipPreview(booking, 'booking')}
-                                        className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                    >
+                                    <button onClick={() => openSlipPreview(booking, 'booking')} className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
                                         <span className="ml-1 truncate">Booking Slip</span>
                                     </button>
-                                    <button
-                                        onClick={() => openSlipPreview(booking, 'bilty')}
-                                        className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                    >
+                                    <button onClick={() => openSlipPreview(booking, 'bilty')} className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
                                         <span className="ml-1 truncate">Bilty Slip</span>
                                     </button>
                                 </div>
-
                                 <div className="border-t my-1"></div>
-
-                                {/* Delete Action */}
                                 <div className="px-2 py-1">
-                                    <button
-                                        onClick={() => handleDeleteClick(booking.id)}
-                                        className="flex items-center w-full px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                                    >
+                                    <button onClick={() => handleDeleteClick(booking.id)} className="flex items-center w-full px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors">
                                         <TrashIcon className="w-4 h-4 mr-3 shrink-0" />
                                         <span className="truncate">Delete Booking</span>
                                     </button>
@@ -646,9 +689,10 @@ const BookingsListPage = () => {
                     )}
                 </div>
             ),
-            className: 'min-w-[50px] max-w-[80px] whitespace-nowrap'
+            className: 'w-10 flex-shrink-0 px-0'
         }
     ];
+
 
     // Date picker component
     const DateRangePicker = () => (
@@ -799,10 +843,11 @@ const BookingsListPage = () => {
                         >
                             <option value="all">All Status</option>
                             <option value="pending">Pending</option>
-                            <option value="completed">Completed</option>
+                            <option value="complete">Completed</option>
                             <option value="cancelled">Cancelled</option>
-                            <option value="in_transit">In Transit</option>
-                            <option value="delivered">Delivered</option>
+                            <option value="partial">Partial</option>
+                            {/* <option value="picked_up">Picked Up</option>
+                            <option value="delivered">Delivered</option> */}
                         </select>
 
                         <DateRangePicker />
@@ -810,7 +855,9 @@ const BookingsListPage = () => {
                         <select className="px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <option value="">Booking Type</option>
                             <option value="normal">Normal</option>
-                            <option value="express">Express</option>
+                            <option value="bank">bank</option>
+                            <option value="commission only">commission only</option>
+                            <option value="stc_truck">stc_truck</option>
                         </select>
 
                         <button
@@ -838,7 +885,7 @@ const BookingsListPage = () => {
                             { label: 'Total Profit', value: `₹${totals.grandtotal.toLocaleString('en-IN')}`, color: 'text-emerald-600' }
                         ].map((item, index) => (
                             <div key={index} className="bg-white p-3 sm:p-4 rounded-lg shadow border border-gray-100">
-                                <div className="text-xs sm:text-sm text-gray-600 truncate">{item.label}</div>
+                                <div className="text-sm sm:text-sm text-gray-600 truncate">{item.label}</div>
                                 <div className={`text-lg sm:text-xl font-bold truncate ${item.color}`}>
                                     {item.value}
                                 </div>
@@ -848,15 +895,15 @@ const BookingsListPage = () => {
                 </div>
 
                 {/* Bookings Table */}
-                <div className="bg-white rounded-lg shadow border border-gray-200">
-                    <div className="overflow-x-auto">
-                        <table className=" min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
+                <div className="bg-white  shadow border border-gray-200 overflow-hidden max-w-full">
+                    <div className="overflow-x-auto scrollbar-thin max-h-[70vh]">
+                        <table className="min-w-full w-full table-auto divide-y divide-gray-200">
+                            <thead className="bg-gray-50 sticky top-0 z-10">
                                 <tr>
                                     {columns.map((column) => (
                                         <th
                                             key={column.key}
-                                            className={`px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap ${column.className || ''}`}
+                                            className={`px-1 py-3 text-left text-sm text-gray-500 uppercase tracking-wider whitespace-nowrap font-semibold ${column.className}`}
                                         >
                                             {column.title}
                                         </th>
@@ -866,7 +913,7 @@ const BookingsListPage = () => {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={columns.length} className="px-6 py-12 text-center">
+                                        <td colSpan={columns.length} className="px-4 py-12 text-center">
                                             <div className="flex flex-col items-center justify-center gap-3">
                                                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
                                                 <p className="text-sm text-gray-600">Loading bookings...</p>
@@ -875,7 +922,7 @@ const BookingsListPage = () => {
                                     </tr>
                                 ) : bookings.length === 0 ? (
                                     <tr>
-                                        <td colSpan={columns.length} className="px-6 py-12 text-center">
+                                        <td colSpan={columns.length} className="px-4 py-12 text-center">
                                             <div className="flex flex-col items-center justify-center gap-3">
                                                 <div className="text-gray-400">
                                                     <MagnifyingGlassIcon className="w-12 h-12" />
@@ -889,11 +936,8 @@ const BookingsListPage = () => {
                                     bookings.map((booking) => (
                                         <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
                                             {columns.map((column) => (
-                                                <td
-                                                    key={column.key}
-                                                    className={`px-4 py-3 ${column.className || ''}`}
-                                                >
-                                                    <div className="min-w-0">
+                                                <td key={column.key} className={`px-1 py-2 text-sm ${column.className}`}>
+                                                    <div className="min-w-0 h-full">
                                                         {column.render(booking)}
                                                     </div>
                                                 </td>
@@ -905,44 +949,32 @@ const BookingsListPage = () => {
                         </table>
                     </div>
 
-                    {/* Pagination */}
-                    <div className="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-                        <div className="text-xs sm:text-sm text-gray-700">
+                    <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div className="text-sm sm:text-sm text-gray-700">
                             Showing {((pagination.current - 1) * pagination.pageSize) + 1} to{' '}
                             {Math.min(pagination.current * pagination.pageSize, pagination.total)} of{' '}
                             {pagination.total} bookings
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <div className="flex items-center gap-1">
                                 <button
                                     onClick={() => handleTableChange(pagination.current - 1, pagination.pageSize)}
                                     disabled={pagination.current === 1}
-                                    className={`p-1.5 rounded-lg transition-colors ${pagination.current === 1
-                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                        }`}
+                                    className={`p-1.5 rounded-lg transition-colors ${pagination.current === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                                     aria-label="Previous page"
                                 >
                                     <ChevronLeftIcon className="w-4 h-4" />
                                 </button>
-
-                                <span className="px-3 py-1 text-sm bg-gray-100 rounded-lg">
-                                    Page {pagination.current}
-                                </span>
-
+                                <span className="px-3 py-1 text-sm bg-gray-100 rounded-lg">Page {pagination.current}</span>
                                 <button
                                     onClick={() => handleTableChange(pagination.current + 1, pagination.pageSize)}
                                     disabled={pagination.current * pagination.pageSize >= pagination.total}
-                                    className={`p-1.5 rounded-lg transition-colors ${pagination.current * pagination.pageSize >= pagination.total
-                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                        }`}
+                                    className={`p-1.5 rounded-lg transition-colors ${pagination.current * pagination.pageSize >= pagination.total ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                                     aria-label="Next page"
                                 >
                                     <ChevronRightIcon className="w-4 h-4" />
                                 </button>
                             </div>
-
                             <select
                                 value={pagination.pageSize}
                                 onChange={(e) => handleTableChange(1, parseInt(e.target.value))}
@@ -956,6 +988,7 @@ const BookingsListPage = () => {
                         </div>
                     </div>
                 </div>
+
             </div>
 
             {/* Slip Preview Modal */}
@@ -1210,6 +1243,23 @@ const BookingsListPage = () => {
                         toast.info('Bilty saved successfully!');
                         fetchBookings(pagination.current, pagination.pageSize, buildFilters());
                     }}
+                />
+            )}
+
+            {/* Challan Modal */}
+            {showChallanModal && selectedBookingForChallan && (
+                <ChallanModal
+                    isOpen={showChallanModal}
+                    onClose={() => {
+                        setShowChallanModal(false);
+                        setChallanData(null);
+                        setIsEditChallanMode(false);
+                    }}
+                    onSuccess={handleChallanSuccess}
+                    challanData={challanData}
+                    isEditMode={isEditChallanMode}
+                    // Pass booking data for prefilling
+                    bookingData={selectedBookingForChallan}
                 />
             )}
         </div>

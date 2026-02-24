@@ -12,21 +12,100 @@ const calculateFreight = (rate, weight) => {
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
+// const calculateAll = (formData) => {
+//     const partyRate = Number(formData.rate) || 0;
+//     const partyWeight = Number(formData.weight) || 0;
+//     const truckRate = Number(formData.truckRate) || 0;
+//     const truckWeight = Number(formData.truckWeight) || 0;
+
+//     const partyFreight = calculateFreight(partyRate, partyWeight);
+//     const truckFreight = calculateFreight(truckRate, truckWeight);
+//     const rawDifference = partyFreight - truckFreight;
+
+//     let commissionAmount = Number(formData.commissionAmount) || 0;
+
+//     if (formData.commissionType === 'truck' && formData.truckCommissionAmount) {
+//         commissionAmount = Number(formData.truckCommissionAmount) || 0;
+//     } else if (formData.commissionPercentage && !formData.commissionAmount) {
+//         commissionAmount = (Number(formData.commissionPercentage) / 100) * partyFreight;
+//     }
+
+//     const differenceAmount = Number(formData.differenceAmount) || rawDifference;
+
+//     const advanceFromParty = Number(formData.initialPaymentFromParty) || 0;
+//     const advanceToTruck = Number(formData.initialPaymentToTruck) || 0;
+
+//     // Halting charges calculation - make sure we access the nested object
+//     const haltingCharges = Number(formData.haltingDetails?.haltingCharges) || 0;
+//     const haltingPaidAmount = Number(formData.haltingDetails?.haltingPaidAmount) || 0;
+//     const haltingPending = haltingCharges - haltingPaidAmount;
+
+//     // Correct commission logic
+//     let partyNet = partyFreight + differenceAmount;
+//     if (formData.commissionType !== 'truck') {
+//         partyNet -= commissionAmount;
+//     }
+
+//     let truckNet = truckFreight;
+//     if (formData.commissionType === 'truck') {
+//         truckNet -= commissionAmount;
+//     }
+
+//     // Add halting charges to truck payment if applicable
+//     truckNet += haltingCharges;
+
+//     return {
+//         partyFreight,
+//         truckFreight,
+//         commissionAmount,
+//         differenceAmount,
+//         partyNetAmount: partyNet,
+//         truckNetAmount: truckNet,
+//         partyPending: partyNet - advanceFromParty,
+//         truckPending: truckNet - advanceToTruck,
+//         rawDifference,
+//         haltingCharges,
+//         haltingPaidAmount,
+//         haltingPending,
+//     };
+// };
+
 const calculateAll = (formData) => {
+
     const partyRate = Number(formData.rate) || 0;
-    const partyWeight = Number(formData.weight) || 0;
     const truckRate = Number(formData.truckRate) || 0;
-    const truckWeight = Number(formData.truckWeight) || 0;
+
+    const loadingWeight = Number(formData.weight) || 0;
+
+    const unloadingWeight =
+        formData.unloadingWeight !== undefined &&
+            formData.unloadingWeight !== null &&
+            formData.unloadingWeight !== ''
+            ? Number(formData.unloadingWeight)
+            : 0;
+
+    let partyWeight = loadingWeight;
+    let truckWeight = loadingWeight;
+    let shortageWeight = 0;
+
+    // Only when unloading comes
+    if (unloadingWeight > 0) {
+        partyWeight = unloadingWeight;
+        truckWeight = Math.min(loadingWeight, unloadingWeight);
+        shortageWeight = loadingWeight - unloadingWeight;
+    }
 
     const partyFreight = calculateFreight(partyRate, partyWeight);
     const truckFreight = calculateFreight(truckRate, truckWeight);
+
     const rawDifference = partyFreight - truckFreight;
 
     let commissionAmount = Number(formData.commissionAmount) || 0;
 
     if (formData.commissionType === 'truck' && formData.truckCommissionAmount) {
         commissionAmount = Number(formData.truckCommissionAmount) || 0;
-    } else if (formData.commissionPercentage && !formData.commissionAmount) {
+    }
+    else if (formData.commissionPercentage && !formData.commissionAmount) {
         commissionAmount = (Number(formData.commissionPercentage) / 100) * partyFreight;
     }
 
@@ -35,12 +114,10 @@ const calculateAll = (formData) => {
     const advanceFromParty = Number(formData.initialPaymentFromParty) || 0;
     const advanceToTruck = Number(formData.initialPaymentToTruck) || 0;
 
-    // Halting charges calculation - make sure we access the nested object
     const haltingCharges = Number(formData.haltingDetails?.haltingCharges) || 0;
     const haltingPaidAmount = Number(formData.haltingDetails?.haltingPaidAmount) || 0;
     const haltingPending = haltingCharges - haltingPaidAmount;
 
-    // Correct commission logic
     let partyNet = partyFreight + differenceAmount;
     if (formData.commissionType !== 'truck') {
         partyNet -= commissionAmount;
@@ -51,7 +128,6 @@ const calculateAll = (formData) => {
         truckNet -= commissionAmount;
     }
 
-    // Add halting charges to truck payment if applicable
     truckNet += haltingCharges;
 
     return {
@@ -67,8 +143,11 @@ const calculateAll = (formData) => {
         haltingCharges,
         haltingPaidAmount,
         haltingPending,
+        shortageWeight
     };
 };
+
+
 
 const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
     const [activeStep, setActiveStep] = useState(0);
@@ -88,6 +167,7 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
         commodity: '',
         rate: '',
         weight: '',
+        unloadingWeight: '',
         weightType: 'kg',
         fromLocation: '',
         toLocation: '',
@@ -129,6 +209,7 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
         truckUtrNo: '',
         truckPanNumber: '',
         truckPaymentDate: '',
+        bankAcHolderName: '',
 
         commissionGivenDate: '',
         commissionPaymentMode: '',
@@ -214,6 +295,7 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
             commodity: bookingData.commodity || '',
             rate: bookingData.rate || '',
             weight: bookingData.weight || '',
+            unloadingWeight: bookingData.unloadingWeight || '',
             weightType: bookingData.weightType || 'kg',
             fromLocation: bookingData.fromLocation || '',
             toLocation: bookingData.toLocation || '',
@@ -255,6 +337,7 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
             truckUtrNo: truckPayment.utrNo || '',
             truckPanNumber: truckPayment.panNumber || '',
             truckPaymentDate: truckPayment.paymentDate ? new Date(truckPayment.paymentDate).toISOString().split('T')[0] : '',
+            bankAcHolderName: truckPayment.bankAcHolderName || '',
 
             commissionGivenDate: commissionData.paymentDate ? new Date(commissionData.paymentDate).toISOString().split('T')[0] : '',
             commissionPaymentMode: commissionData.paymentMode || '',
@@ -296,74 +379,206 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
         setCalculations(newCalcs);
     };
 
+    // const handleChange = (e) => {
+    //     const { name, value } = e.target;
+    //     setFormData(prev => {
+    //         const newData = { ...prev, [name]: value };
+
+    //         // Handle nested halting details
+    //         if (name.startsWith('halting.')) {
+    //             const field = name.split('.')[1];
+    //             const updatedHalting = {
+    //                 ...prev.haltingDetails,
+    //                 [field]: value
+    //             };
+
+    //             // Auto-calculate halting charges when price per day or days change
+    //             if (field === 'pricePerDay' || field === 'haltingDays') {
+    //                 const pricePerDay = field === 'pricePerDay' ? value : prev.haltingDetails.pricePerDay;
+    //                 const haltingDays = field === 'haltingDays' ? value : prev.haltingDetails.haltingDays;
+
+    //                 if (pricePerDay && haltingDays) {
+    //                     const charges = Number(pricePerDay) * Number(haltingDays);
+    //                     updatedHalting.haltingCharges = charges.toString();
+    //                 }
+    //             }
+
+    //             newData.haltingDetails = updatedHalting;
+    //         }
+
+    //         // Always recalculate when relevant fields change
+    //         if ([
+    //             'rate', 'weight', 'truckRate', 'truckWeight',
+    //             'commissionPercentage', 'commissionAmount', 'truckCommissionAmount', 'commissionType',
+    //             'differenceAmount', 'initialPaymentFromParty', 'initialPaymentToTruck',
+    //             'halting.haltingCharges', 'halting.haltingPaidAmount'
+    //         ].includes(name) || name.startsWith('halting.')) {
+    //             const newCalcs = calculateAll(newData);
+    //             setCalculations(newCalcs);
+
+    //             // AUTO-FILL LOGIC FOR COMMISSION
+    //             if (name === 'commissionType') {
+    //                 if (value === 'truck' && newData.truckCommissionAmount) {
+    //                     newData.commissionAmount = Number(newData.truckCommissionAmount).toFixed(2);
+    //                 } else if (value === 'party' && newData.commissionPercentage && newData.rate && newData.weight) {
+    //                     const partyFreight = calculateFreight(newData.rate, newData.weight);
+    //                     newData.commissionAmount = ((Number(newData.commissionPercentage) / 100) * partyFreight).toFixed(2);
+    //                 } else if (!value || value === 'free') {
+    //                     newData.commissionAmount = '';
+    //                 }
+    //             }
+
+    //             // Auto-fill commission amount when truck commission is entered and type is truck
+    //             if (name === 'truckCommissionAmount' && newData.commissionType === 'truck') {
+    //                 newData.commissionAmount = Number(value).toFixed(2) || '';
+    //             }
+
+    //             // Auto-fill commission amount when percentage is entered and type is party
+    //             if (name === 'commissionPercentage' && newData.commissionType === 'party' && newData.rate && newData.weight) {
+    //                 const partyFreight = calculateFreight(newData.rate, newData.weight);
+    //                 newData.commissionAmount = ((Number(value) / 100) * partyFreight).toFixed(2);
+    //             }
+
+    //             // Auto-fill difference amount
+    //             if ((!newData.differenceAmount && name !== 'differenceAmount') ||
+    //                 ['rate', 'weight', 'truckRate', 'truckWeight'].includes(name)) {
+    //                 const partyFreight = calculateFreight(newData.rate, newData.weight);
+    //                 const truckFreight = calculateFreight(newData.truckRate, newData.truckWeight);
+    //                 const rawDifference = partyFreight - truckFreight;
+    //                 newData.differenceAmount = rawDifference.toFixed(2);
+    //             }
+    //         }
+
+    //         return newData;
+    //     });
+    // };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
+
         setFormData(prev => {
+
             const newData = { ...prev, [name]: value };
 
-            // Handle nested halting details
+            // Handle nested halting
             if (name.startsWith('halting.')) {
+
                 const field = name.split('.')[1];
+
                 const updatedHalting = {
                     ...prev.haltingDetails,
                     [field]: value
                 };
 
-                // Auto-calculate halting charges when price per day or days change
                 if (field === 'pricePerDay' || field === 'haltingDays') {
-                    const pricePerDay = field === 'pricePerDay' ? value : prev.haltingDetails.pricePerDay;
-                    const haltingDays = field === 'haltingDays' ? value : prev.haltingDetails.haltingDays;
+
+                    const pricePerDay =
+                        field === 'pricePerDay'
+                            ? value
+                            : prev.haltingDetails.pricePerDay;
+
+                    const haltingDays =
+                        field === 'haltingDays'
+                            ? value
+                            : prev.haltingDetails.haltingDays;
 
                     if (pricePerDay && haltingDays) {
-                        const charges = Number(pricePerDay) * Number(haltingDays);
-                        updatedHalting.haltingCharges = charges.toString();
+                        updatedHalting.haltingCharges =
+                            (Number(pricePerDay) * Number(haltingDays)).toString();
                     }
                 }
 
                 newData.haltingDetails = updatedHalting;
             }
 
-            // Always recalculate when relevant fields change
+            // Recalculate on important fields
             if ([
-                'rate', 'weight', 'truckRate', 'truckWeight',
-                'commissionPercentage', 'commissionAmount', 'truckCommissionAmount', 'commissionType',
-                'differenceAmount', 'initialPaymentFromParty', 'initialPaymentToTruck',
-                'halting.haltingCharges', 'halting.haltingPaidAmount'
+                'rate', 'weight', 'truckRate', 'unloadingWeight',
+                'commissionPercentage', 'commissionAmount',
+                'truckCommissionAmount', 'commissionType',
+                'differenceAmount',
+                'initialPaymentFromParty',
+                'initialPaymentToTruck'
             ].includes(name) || name.startsWith('halting.')) {
-                const newCalcs = calculateAll(newData);
-                setCalculations(newCalcs);
 
-                // AUTO-FILL LOGIC FOR COMMISSION
+                const loadingWeight = Number(newData.weight) || 0;
+
+                const unloadingWeight =
+                    newData.unloadingWeight !== undefined &&
+                        newData.unloadingWeight !== null &&
+                        newData.unloadingWeight !== ''
+                        ? Number(newData.unloadingWeight)
+                        : 0;
+
+                let partyWeight = loadingWeight;
+                let truckWeight = loadingWeight;
+
+                if (unloadingWeight > 0) {
+                    partyWeight = unloadingWeight;
+                    truckWeight = Math.min(loadingWeight, unloadingWeight);
+                }
+
+                const partyFreight = calculateFreight(newData.rate, partyWeight);
+                const truckFreight = calculateFreight(newData.truckRate, truckWeight);
+
+                const rawDifference = partyFreight - truckFreight;
+
+                // COMMISSION TYPE CHANGE
                 if (name === 'commissionType') {
+
                     if (value === 'truck' && newData.truckCommissionAmount) {
-                        newData.commissionAmount = Number(newData.truckCommissionAmount).toFixed(2);
-                    } else if (value === 'party' && newData.commissionPercentage && newData.rate && newData.weight) {
-                        const partyFreight = calculateFreight(newData.rate, newData.weight);
-                        newData.commissionAmount = ((Number(newData.commissionPercentage) / 100) * partyFreight).toFixed(2);
-                    } else if (!value || value === 'free') {
+                        newData.commissionAmount =
+                            Number(newData.truckCommissionAmount).toFixed(2);
+                    }
+
+                    else if (
+                        value === 'party' &&
+                        newData.commissionPercentage &&
+                        newData.rate
+                    ) {
+                        newData.commissionAmount =
+                            ((Number(newData.commissionPercentage) / 100)
+                                * partyFreight).toFixed(2);
+                    }
+
+                    else if (!value || value === 'free') {
                         newData.commissionAmount = '';
                     }
                 }
 
-                // Auto-fill commission amount when truck commission is entered and type is truck
-                if (name === 'truckCommissionAmount' && newData.commissionType === 'truck') {
-                    newData.commissionAmount = Number(value).toFixed(2) || '';
+                // Truck Commission
+                if (
+                    name === 'truckCommissionAmount' &&
+                    newData.commissionType === 'truck'
+                ) {
+                    newData.commissionAmount =
+                        Number(value).toFixed(2) || '';
                 }
 
-                // Auto-fill commission amount when percentage is entered and type is party
-                if (name === 'commissionPercentage' && newData.commissionType === 'party' && newData.rate && newData.weight) {
-                    const partyFreight = calculateFreight(newData.rate, newData.weight);
-                    newData.commissionAmount = ((Number(value) / 100) * partyFreight).toFixed(2);
+                // Percentage Commission
+                if (
+                    name === 'commissionPercentage' &&
+                    newData.commissionType === 'party' &&
+                    newData.rate
+                ) {
+                    newData.commissionAmount =
+                        ((Number(value) / 100)
+                            * partyFreight).toFixed(2);
                 }
 
-                // Auto-fill difference amount
-                if ((!newData.differenceAmount && name !== 'differenceAmount') ||
-                    ['rate', 'weight', 'truckRate', 'truckWeight'].includes(name)) {
-                    const partyFreight = calculateFreight(newData.rate, newData.weight);
-                    const truckFreight = calculateFreight(newData.truckRate, newData.truckWeight);
-                    const rawDifference = partyFreight - truckFreight;
-                    newData.differenceAmount = rawDifference.toFixed(2);
+                // Difference Auto Fill
+                if (
+                    (!newData.differenceAmount &&
+                        name !== 'differenceAmount') ||
+                    ['rate', 'weight', 'truckRate', 'unloadingWeight']
+                        .includes(name)
+                ) {
+                    newData.differenceAmount =
+                        rawDifference.toFixed(2);
                 }
+
+                const newCalcs = calculateAll(newData);
+                setCalculations(newCalcs);
             }
 
             return newData;
@@ -396,6 +611,7 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
                 ...formData,
                 rate: Number(formData.rate) || 0,
                 weight: Number(formData.weight) || 0,
+                unloadingWeight: Number(formData.unloadingWeight) || 0,
                 truckRate: Number(formData.truckRate) || 0,
                 truckWeight: Number(formData.truckWeight) || 0,
                 commissionAmount: Number(formData.commissionAmount) || 0,
@@ -404,6 +620,7 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
                 initialPaymentToTruck: Number(formData.initialPaymentToTruck) || 0,
                 initialPaymentFromParty: Number(formData.initialPaymentFromParty) || 0,
                 commissionType: formData.commissionType || null,
+
 
                 // Send calculated totals
                 partyFreight: calculations.partyFreight,
@@ -452,7 +669,7 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
                     }
                 });
                 toast.success('Booking updated successfully!');
-                setSuccess('Booking updated successfully!');
+                // setSuccess('Booking updated successfully!');
             } else {
                 response = await axios.post(`${API_URL}/booking/create`, payload, {
                     headers: {
@@ -461,7 +678,7 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
                     }
                 });
                 toast.success('Booking created successfully!');
-                setSuccess('Booking created successfully!');
+                // setSuccess('Booking created successfully!');
             }
 
             if (onSuccess) {
@@ -480,6 +697,7 @@ const BookingForm = ({ booking, isEditMode, onSuccess, onClose }) => {
                         commodity: '',
                         rate: '',
                         weight: '',
+                        unloadingWeight: '',
                         weightType: 'kg',
                         fromLocation: '',
                         toLocation: '',

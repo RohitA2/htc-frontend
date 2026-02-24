@@ -4,7 +4,7 @@ import axios from 'axios';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-toastify';
 
-const ChallanModal = ({ isOpen, onClose, onSuccess, challanData, isEditMode = false }) => {
+const ChallanModal = ({ isOpen, onClose, onSuccess, challanData, isEditMode = false, bookingData }) => {
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -55,9 +55,12 @@ const ChallanModal = ({ isOpen, onClose, onSuccess, challanData, isEditMode = fa
   const requiredTextFields = ['challanNo', 'date', 'truckNo', 'driverName', 'driverMobileNo'];
   const requiredFileFields = isEditMode ? [] : ['registrationCard', 'gadiPhoto', 'driverLicence'];
 
-  // Load data if in edit mode
+  // Load data for prefilling from bookingData or edit mode
   useEffect(() => {
+    if (!isOpen) return;
+
     if (isEditMode && challanData) {
+      // Edit mode - load existing challan data
       setFormData({
         challanNo: challanData.challanNo || '',
         date: challanData.date || new Date().toISOString().split('T')[0],
@@ -98,8 +101,45 @@ const ChallanModal = ({ isOpen, onClose, onSuccess, challanData, isEditMode = fa
       if (challanData.bankPassbookOrCancelCheque) fileDisplay.bankPassbookOrCancelCheque = 'Already uploaded';
       
       setFileDisplayNames(fileDisplay);
+    } else if (bookingData && !isEditMode) {
+      // Create mode - prefill with booking data
+      const generateChallanNo = () => {
+        const date = new Date();
+        const year = date.getFullYear().toString().slice(-2);
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        return `CH${year}${month}${day}${random}`;
+      };
+
+      setFormData({
+        challanNo: generateChallanNo(),
+        date: new Date().toISOString().split('T')[0],
+        truckNo: bookingData.truck?.truckNo || '',
+        driverName: bookingData.truck?.driverName || '',
+        driverMobileNo: bookingData.truck?.driverPhone || '',
+        ownerMobileNo: '',
+        aadharCardNumber: '',
+        panCardNumber: '',
+        acHolderName: '',
+        accountNo: '',
+        ifscCode: '',
+        bankName: '',
+        branch: '',
+        linkAc: '',
+        guarantorName1: '',
+        guarantorAddress1: '',
+        guarantorMobile1: '',
+        guarantorName2: '',
+        guarantorAddress2: '',
+        guarantorMobile2: '',
+        partyName: bookingData.party?.partyName || '',
+        lastLoadingFrom: bookingData.fromLocation || '',
+        lastUnloadingTo: bookingData.toLocation || '',
+        preparedBy: localStorage.getItem('userName') || '', // You might want to get this from user context
+      });
     }
-  }, [isEditMode, challanData]);
+  }, [isOpen, isEditMode, challanData, bookingData]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -217,6 +257,11 @@ const ChallanModal = ({ isOpen, onClose, onSuccess, challanData, isEditMode = fa
       }
     });
 
+    // Append bookingId if creating from booking
+    if (bookingData && !isEditMode) {
+      payload.append('bookingId', bookingData.id);
+    }
+
     // Append files
     Object.entries(files).forEach(([key, file]) => {
       if (file) {
@@ -229,16 +274,18 @@ const ChallanModal = ({ isOpen, onClose, onSuccess, challanData, isEditMode = fa
       
       if (isEditMode && challanData) {
         // Update existing challan
-        response = await axios.put(`${API_URL}/challans/${challanData.id}`, payload, {
+        response = await axios.put(`${API_URL}/challans/update/${challanData.id}`, payload, {
           headers: {
             'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
         });
       } else {
         // Create new challan
-        response = await axios.post(`${API_URL}/challans`, payload, {
+        response = await axios.post(`${API_URL}/challans/create`, payload, {
           headers: {
             'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
         });
       }
@@ -288,6 +335,11 @@ const ChallanModal = ({ isOpen, onClose, onSuccess, challanData, isEditMode = fa
         <div className="bg-blue-900 text-white px-6 py-3 flex justify-between items-center">
           <h2 className="text-xl font-bold">
             {isEditMode ? 'Edit Challan' : 'Create New Challan'}
+            {bookingData && !isEditMode && (
+              <span className="text-sm font-normal ml-2 text-blue-200">
+                (for Booking #{bookingData.id})
+              </span>
+            )}
           </h2>
           <button
             onClick={onClose}
@@ -300,6 +352,19 @@ const ChallanModal = ({ isOpen, onClose, onSuccess, challanData, isEditMode = fa
 
         {/* Scrollable Table Form */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
+          {bookingData && !isEditMode && (
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="text-sm text-blue-800">
+                <span className="font-semibold">Prefilled from Booking #{bookingData.id}:</span>
+                <span className="ml-2">
+                  {bookingData.truck?.truckNo ? `Truck: ${bookingData.truck.truckNo}` : ''}
+                  {bookingData.truck?.driverName ? `, Driver: ${bookingData.truck.driverName}` : ''}
+                  {bookingData.party?.partyName ? `, Party: ${bookingData.party.partyName}` : ''}
+                </span>
+              </div>
+            </div>
+          )}
+          
           <table className="w-full border-collapse text-sm">
             <tbody>
               {/* Row 1 - Challan No + Date */}

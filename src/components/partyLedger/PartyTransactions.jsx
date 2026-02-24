@@ -20,11 +20,14 @@ import {
     Wallet,
     Truck,
     UserCircle,
-    FileText
+    FileText,
+    FileDown
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const PartyTransactionLedger = () => {
     const [parties, setParties] = useState([]);
@@ -38,6 +41,8 @@ const PartyTransactionLedger = () => {
         fromDate: '',
         toDate: ''
     });
+    const [downloadingPdf, setDownloadingPdf] = useState({});
+    const [bookingIdMap, setBookingIdMap] = useState({});
 
     const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -116,6 +121,42 @@ const PartyTransactionLedger = () => {
         }
     };
 
+    // Fetch party bookings to create booking ID mapping
+    const fetchPartyBookings = async (partyId) => {
+        try {
+            const response = await axios.get(`${API_URL}/booking/party/${partyId}`);
+
+            if (response.data.success) {
+                const bookings = response.data.bookings || response.data.data || [];
+
+                // Create a mapping of voucher numbers to booking IDs
+                const mapping = {};
+                bookings.forEach(booking => {
+                    const bookingId = booking.bookingId || booking.id;
+                    if (bookingId) {
+                        // Map by booking ID as string
+                        mapping[bookingId.toString()] = bookingId;
+
+                        // Map by voucher number format
+                        mapping[`#${bookingId}`] = bookingId;
+                        mapping[`Booking #${bookingId}`] = bookingId;
+
+                        // Map by voucher number if available in booking
+                        if (booking.voucherNo) {
+                            mapping[booking.voucherNo] = bookingId;
+                            mapping[booking.voucherNo.replace(/^#/, '')] = bookingId;
+                        }
+                    }
+                });
+
+                setBookingIdMap(mapping);
+            }
+        } catch (error) {
+            console.error('Error fetching party bookings:', error);
+            // Don't show toast error, just log it
+        }
+    };
+
     // Fetch ledger for selected party
     const fetchPartyLedger = async (partyId) => {
         if (!partyId) return;
@@ -132,9 +173,32 @@ const PartyTransactionLedger = () => {
 
             if (response.data.success) {
                 setLedgerData(response.data);
+
                 // Find and set the selected party from parties list
                 const party = parties.find(p => p.partyId === partyId);
                 setSelectedParty(party);
+
+                // Create booking ID mapping from party data if available
+                if (party && party.bookings) {
+                    const mapping = {};
+                    party.bookings.forEach(booking => {
+                        const bookingId = booking.bookingId || booking.id;
+                        if (bookingId) {
+                            mapping[bookingId.toString()] = bookingId;
+                            mapping[`#${bookingId}`] = bookingId;
+                            mapping[`Booking #${bookingId}`] = bookingId;
+
+                            if (booking.voucherNo) {
+                                mapping[booking.voucherNo] = bookingId;
+                                mapping[booking.voucherNo.replace(/^#/, '')] = bookingId;
+                            }
+                        }
+                    });
+                    setBookingIdMap(mapping);
+                } else {
+                    // If no bookings in party data, fetch them separately
+                    await fetchPartyBookings(partyId);
+                }
             } else {
                 toast.error('Failed to fetch ledger data');
             }
@@ -143,6 +207,328 @@ const PartyTransactionLedger = () => {
             toast.error('Failed to load ledger data');
         } finally {
             setLoadingLedger(false);
+        }
+    };
+
+    // Fetch booking details and generate PDF
+    const downloadBookingPdf = async (bookingId, voucherNo) => {
+        if (!bookingId) return;
+
+        try {
+            setDownloadingPdf(prev => ({ ...prev, [bookingId]: true }));
+
+            const response = await axios.get(`${API_URL}/booking/one/${bookingId}`);
+
+            if (response.data.success) {
+                const bookingData = response.data.data;
+                console.log("bookingData", bookingData);
+                await generateBookingPDF(bookingData, voucherNo);
+                // Remove the toast success from here - it's now in generateBookingPDF
+            } else {
+                toast.error('Failed to fetch booking details');
+            }
+        } catch (error) {
+            console.error('Error fetching booking details:', error);
+            toast.error('Failed to load booking details for PDF');
+        } finally {
+            setDownloadingPdf(prev => ({ ...prev, [bookingId]: false }));
+        }
+    };
+
+    // Generate PDF for booking
+    const generateBookingPDF = (bookingData, voucherNo) => {
+        try {
+            const doc = new jsPDF();
+
+            // Header
+            doc.setFontSize(20);
+            doc.setTextColor(0, 51, 102);
+            doc.text('BOOKING DETAILS', 105, 15, { align: 'center' });
+
+            doc.setFontSize(11);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Booking Ref No. #: ${voucherNo || 'N/A'}`, 105, 22, { align: 'center' });
+
+            const date = new Date().toLocaleDateString('en-IN');
+            doc.setFontSize(9);
+            doc.setTextColor(150, 150, 150);
+            doc.text(`Generated on: ${date}`, 105, 28, { align: 'center' });
+
+            let yPos = 40;
+
+            // Company Details
+            doc.setFontSize(11);
+            doc.setTextColor(0, 51, 102);
+            doc.text('Company:', 14, yPos);
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text(bookingData.company?.companyName || 'stc transport', 45, yPos);
+            yPos += 7;
+
+            // Bank Accounts
+            if (bookingData.company?.banks && bookingData.company.banks.length > 0) {
+                doc.setFontSize(11);
+                doc.setTextColor(0, 51, 102);
+                doc.text('Bank:', 14, yPos);
+                doc.setFontSize(9);
+                doc.setTextColor(80, 80, 80);
+                const bank = bookingData.company.banks[0];
+                doc.text(`${bank.acHolderName} - A/C: ${bank.accountNo} (${bank.branchName})`, 45, yPos);
+                yPos += 7;
+            }
+
+            yPos += 3;
+
+            // Booking Information
+            doc.setFontSize(12);
+            doc.setTextColor(0, 51, 102);
+            doc.text('Booking Information', 14, yPos);
+            yPos += 7;
+
+            // Two-column layout
+            const leftColumn = [
+                ['Booking ID:', bookingData.id],
+                ['Date:', formatDate(bookingData.date)],
+                ['Status:', bookingData.status || 'N/A'],
+                ['Type:', bookingData.bookingType || 'N/A'],
+                ['Commodity:', bookingData.commodity || 'N/A'],
+            ];
+
+            const rightColumn = [
+                ['Weight:', `${bookingData.weight || 0} ${bookingData.weightType || ''}`],
+                ['Rate:', `Rs. ${formatCurrency(bookingData.rate)}`],
+                ['From:', bookingData.fromLocation || 'N/A'],
+                ['To:', bookingData.toLocation || 'N/A'],
+            ];
+
+            doc.setFontSize(9);
+            leftColumn.forEach((item, index) => {
+                doc.setTextColor(60, 60, 60);
+                doc.text(item[0], 14, yPos + (index * 5));
+                doc.setTextColor(0, 0, 0);
+                doc.text(String(item[1]), 45, yPos + (index * 5));
+            });
+
+            rightColumn.forEach((item, index) => {
+                doc.setTextColor(60, 60, 60);
+                doc.text(item[0], 100, yPos + (index * 5));
+                doc.setTextColor(0, 0, 0);
+                doc.text(String(item[1]), 130, yPos + (index * 5));
+            });
+
+            yPos += (Math.max(leftColumn.length, rightColumn.length) * 5) + 10;
+
+            // Party and Truck Details
+            // Party Details
+            doc.setFontSize(12);
+            doc.setTextColor(0, 51, 102);
+            doc.text('Party Details', 14, yPos);
+
+            // Truck Details
+            doc.text('Truck Details', 100, yPos);
+            yPos += 6;
+
+            // Party details content
+            doc.setFontSize(9);
+            doc.setTextColor(60, 60, 60);
+            doc.text('Name:', 14, yPos);
+            doc.setTextColor(0, 0, 0);
+            doc.text(bookingData.party?.partyName || 'N/A', 35, yPos);
+            yPos += 5;
+
+            doc.setTextColor(60, 60, 60);
+            doc.text('Phone:', 14, yPos);
+            doc.setTextColor(0, 0, 0);
+            doc.text(bookingData.party?.partyPhone || 'N/A', 35, yPos);
+
+            // Truck details content
+            doc.setTextColor(60, 60, 60);
+            doc.text('Truck No:', 100, yPos - 5);
+            doc.setTextColor(0, 0, 0);
+            doc.text(bookingData.truck?.truckNo || 'N/A', 130, yPos - 5);
+
+            doc.setTextColor(60, 60, 60);
+            doc.text('Driver:', 100, yPos);
+            doc.setTextColor(0, 0, 0);
+            doc.text(bookingData.truck?.driverName || 'N/A', 130, yPos);
+            yPos += 5;
+
+            doc.setTextColor(60, 60, 60);
+            doc.text('Driver Phone:', 100, yPos);
+            doc.setTextColor(0, 0, 0);
+            doc.text(bookingData.truck?.driverPhone || 'N/A', 130, yPos);
+
+            yPos += 12;
+
+            // Freight Summary
+            const totalPaid = bookingData.partyPayments?.reduce((sum, payment) =>
+                sum + parseFloat(payment.amount || 0), 0) || 0;
+            const freightAmount = parseFloat(bookingData.partyFreight || 0);
+            const balanceAmount = freightAmount - totalPaid;
+
+            doc.setFontSize(12);
+            doc.setTextColor(0, 51, 102);
+            doc.text('Freight Summary', 14, yPos);
+            yPos += 7;
+
+            // Display freight details
+            doc.setFontSize(9);
+
+            // First row
+            doc.setTextColor(60, 60, 60);
+            doc.text('Party Freight:', 14, yPos);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Rs. ${formatCurrency(bookingData.partyFreight)}`, 50, yPos);
+
+            doc.setTextColor(60, 60, 60);
+            doc.text('Truck Freight:', 85, yPos);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Rs. ${formatCurrency(bookingData.truckFreight)}`, 125, yPos);
+            yPos += 6;
+
+            // Second row
+            doc.setTextColor(60, 60, 60);
+            doc.text('Total Paid:', 14, yPos);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Rs. ${formatCurrency(totalPaid)}`, 50, yPos);
+
+            doc.setTextColor(60, 60, 60);
+            doc.text('Difference:', 85, yPos);
+            const diffValue = parseFloat(bookingData.differenceAmount);
+            doc.setTextColor(diffValue > 0 ? 220 : diffValue < 0 ? 22 : 0,
+                diffValue > 0 ? 38 : diffValue < 0 ? 163 : 0,
+                diffValue > 0 ? 38 : diffValue < 0 ? 74 : 0);
+            doc.text(`Rs. ${formatCurrency(bookingData.differenceAmount)}`, 125, yPos);
+            yPos += 6;
+
+            // Third row
+            doc.setTextColor(60, 60, 60);
+            doc.text('Balance:', 14, yPos);
+            doc.setTextColor(balanceAmount > 0 ? 220 : balanceAmount < 0 ? 22 : 0,
+                balanceAmount > 0 ? 38 : balanceAmount < 0 ? 163 : 0,
+                balanceAmount > 0 ? 38 : balanceAmount < 0 ? 74 : 0);
+            doc.text(`Rs. ${formatCurrency(balanceAmount)}`, 50, yPos);
+
+            yPos += 12;
+
+            // Party Payments Table
+            if (bookingData.partyPayments && bookingData.partyPayments.length > 0) {
+                doc.setFontSize(12);
+                doc.setTextColor(0, 51, 102);
+                doc.text('Payment History', 14, yPos);
+                yPos += 7;
+
+                const paymentRows = bookingData.partyPayments.map(payment => [
+                    formatDate(payment.paymentDate),
+                    `Rs. ${formatCurrency(payment.amount)}`,
+                    payment.paymentMode || 'N/A',
+                    payment.utrNo || '-'
+                ]);
+
+                autoTable(doc, {
+                    startY: yPos,
+                    head: [['Date', 'Amount', 'Mode', 'UTR No.']],
+                    body: paymentRows,
+                    theme: 'striped',
+                    headStyles: { fillColor: [0, 51, 102], textColor: 255, fontSize: 9 },
+                    styles: { fontSize: 8, cellPadding: 2 },
+                    margin: { left: 14, right: 14 },
+                });
+
+                yPos = doc.lastAutoTable?.finalY + 10 || yPos + 30;
+            }
+
+            // Haltings Table
+            if (bookingData.haltings && bookingData.haltings.length > 0) {
+                doc.setFontSize(12);
+                doc.setTextColor(0, 51, 102);
+                doc.text('Halting Charges', 14, yPos);
+                yPos += 7;
+
+                const haltingRows = bookingData.haltings.map(halting => [
+                    formatDate(halting.haltingDate),
+                    halting.days,
+                    `Rs. ${formatCurrency(halting.pricePerDay)}`,
+                    `Rs. ${formatCurrency(halting.amount)}`,
+                    halting.reason || '-'
+                ]);
+
+                autoTable(doc, {
+                    startY: yPos,
+                    head: [['Date', 'Days', 'Price/Day', 'Total', 'Reason']],
+                    body: haltingRows,
+                    theme: 'striped',
+                    headStyles: { fillColor: [0, 51, 102], textColor: 255, fontSize: 9 },
+                    styles: { fontSize: 8, cellPadding: 2 },
+                    margin: { left: 14, right: 14 },
+                });
+
+                yPos = doc.lastAutoTable?.finalY + 10 || yPos + 30;
+            }
+
+            // Commissions Table
+            // if (bookingData.commissions && bookingData.commissions.length > 0) {
+            //     doc.setFontSize(12);
+            //     doc.setTextColor(0, 51, 102);
+            //     doc.text('Commissions', 14, yPos);
+            //     yPos += 7;
+
+            //     const commissionRows = bookingData.commissions.map(commission => [
+            //         commission.commissionType || 'N/A',
+            //         `Rs. ${formatCurrency(commission.amount)}`,
+            //         commission.paymentMode || 'N/A',
+            //         commission.utrNo || '-',
+            //         formatDate(commission.paymentDate)
+            //     ]);
+
+            //     autoTable(doc, {
+            //         startY: yPos,
+            //         head: [['Type', 'Amount', 'Mode', 'UTR No.', 'Date']],
+            //         body: commissionRows,
+            //         theme: 'striped',
+            //         headStyles: { fillColor: [0, 51, 102], textColor: 255, fontSize: 9 },
+            //         styles: { fontSize: 8, cellPadding: 2 },
+            //         margin: { left: 14, right: 14 },
+            //     });
+
+            //     yPos = doc.lastAutoTable?.finalY + 10 || yPos + 30;
+            // }
+
+            // Updated By (at bottom)
+            if (bookingData.updatedByUser) {
+                doc.setFontSize(8);
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Updated By: ${bookingData.updatedByUser.fullName}`, 14, doc.internal.pageSize.height - 15);
+            }
+
+            // Footer
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(150, 150, 150);
+                doc.text(
+                    `Generated by ${bookingData.company?.companyName || 'stc transport'}, ${new Date().toLocaleDateString('en-IN')}`,
+                    105,
+                    doc.internal.pageSize.height - 10,
+                    { align: 'center' }
+                );
+                doc.text(
+                    `Page ${i} of ${pageCount}`,
+                    doc.internal.pageSize.width - 20,
+                    doc.internal.pageSize.height - 10
+                );
+            }
+
+            // Save PDF
+            const fileName = `Booking_${voucherNo || bookingData.id}_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(fileName);
+
+            toast.success('PDF generated successfully');
+
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            toast.error(`Failed to generate PDF: ${error.message}`);
         }
     };
 
@@ -389,6 +775,80 @@ const PartyTransactionLedger = () => {
         setSearchTerm(e.target.value);
     };
 
+    // Extract booking ID from entry
+    // Extract booking ID from entry
+    const extractBookingId = (entry) => {
+        const voucherNo = entry.voucherNo || '';
+        const particulars = entry.particulars || '';
+
+        // Convert voucherNo to string if it's a number
+        const voucherNoStr = String(voucherNo);
+
+        // First check if we have a direct mapping for this voucher number
+        if (voucherNoStr) {
+            // Try exact match
+            if (bookingIdMap[voucherNoStr]) {
+                return bookingIdMap[voucherNoStr];
+            }
+
+            // Try without # prefix
+            const cleanVoucherNo = voucherNoStr.replace(/^#/, '');
+            if (bookingIdMap[cleanVoucherNo]) {
+                return bookingIdMap[cleanVoucherNo];
+            }
+
+            // Try with # prefix
+            if (bookingIdMap[`#${cleanVoucherNo}`]) {
+                return bookingIdMap[`#${cleanVoucherNo}`];
+            }
+        }
+
+        // Try to extract from voucher number directly
+        if (voucherNoStr) {
+            const numericVoucher = voucherNoStr.replace(/[^0-9]/g, '');
+            if (numericVoucher && !isNaN(parseInt(numericVoucher, 10))) {
+                const id = parseInt(numericVoucher, 10);
+                // Verify this ID exists in our map or is a valid booking ID
+                if (bookingIdMap[id.toString()] || bookingIdMap[`#${id}`]) {
+                    return id;
+                }
+                // If not in map but it's a booking entry, assume it's valid
+                if (entry.voucherType === 'Booking') {
+                    return id;
+                }
+            }
+        }
+
+        // Try to extract booking ID from various formats in particulars
+        const patterns = [
+            /Booking #(\d+)/i,
+            /Booking ID:?\s*(\d+)/i,
+            /Booking (\d+)/i,
+            /#(\d+)/i,
+            /booking[:\s]*(\d+)/i,
+            /voucher[:\s]*(\d+)/i,
+            /id[:\s]*(\d+)/i
+        ];
+
+        for (const pattern of patterns) {
+            const match = particulars.match(pattern);
+            if (match && match[1]) {
+                const id = parseInt(match[1], 10);
+                return id;
+            }
+        }
+
+        // If it's a booking entry, try to use the numeric part of voucher number
+        if (entry.voucherType === 'Booking' && voucherNoStr) {
+            const numericVoucher = voucherNoStr.replace(/[^0-9]/g, '');
+            if (numericVoucher) {
+                return parseInt(numericVoucher, 10);
+            }
+        }
+
+        return null;
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 p-4 md:p-6">
             {/* Header */}
@@ -516,7 +976,7 @@ const PartyTransactionLedger = () => {
                                 placeholder="Search by party name, phone, truck number, or driver name..."
                                 value={searchTerm}
                                 onChange={handleSearchChange}
-                                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             />
                             {searchTerm && (
                                 <button
@@ -527,9 +987,9 @@ const PartyTransactionLedger = () => {
                                 </button>
                             )}
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">
+                        {/* <p className="text-xs text-gray-500 mt-2">
                             Search across all fields: party name, phone number, truck numbers, and driver names
-                        </p>
+                        </p> */}
                     </div>
 
                     <div className="flex flex-wrap gap-2">
@@ -742,18 +1202,7 @@ const PartyTransactionLedger = () => {
 
                                 {/* Summary Cards */}
                                 {ledgerData && (
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                        {/* <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-sm text-blue-700 mb-1">Opening Balance</p>
-                                                    <p className="text-xl font-bold text-blue-900">
-                                                        ₹{formatCurrency(ledgerData.openingBalance)}
-                                                    </p>
-                                                </div>
-                                                <Wallet className="w-8 h-8 text-blue-500" />
-                                            </div>
-                                        </div> */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                                             <div className="flex items-center justify-between">
                                                 <div>
@@ -862,76 +1311,106 @@ const PartyTransactionLedger = () => {
                                                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                             Type
                                                         </th>
+                                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            PDF
+                                                        </th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-200">
-                                                    {ledgerData.ledger.map((entry, index) => (
-                                                        <tr
-                                                            key={index}
-                                                            className="hover:bg-gray-50"
-                                                        >
-                                                            <td className="py-3 px-4">
-                                                                <div className="flex items-center space-x-2">
-                                                                    <Calendar className="w-4 h-4 text-gray-400" />
+                                                    {ledgerData.ledger.map((entry, index) => {
+                                                        const bookingId = extractBookingId(entry);
+                                                        const isBookingEntry = entry.voucherType === 'Booking' ||
+                                                            entry.particulars?.toLowerCase().includes('booking');
+
+                                                        return (
+                                                            <tr
+                                                                key={index}
+                                                                className="hover:bg-gray-50"
+                                                            >
+                                                                <td className="py-3 px-4">
+                                                                    <div className="flex items-center space-x-2">
+                                                                        <Calendar className="w-4 h-4 text-gray-400" />
+                                                                        <span className="text-sm font-medium text-gray-900">
+                                                                            {formatDate(entry.date)}
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="py-3 px-4">
+                                                                    <div className="max-w-xs">
+                                                                        <p className="text-sm text-gray-900">
+                                                                            {entry.particulars}
+                                                                        </p>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="py-3 px-4">
+                                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${entry.voucherType === 'Booking'
+                                                                        ? 'bg-blue-100 text-blue-800'
+                                                                        : 'bg-green-100 text-green-800'
+                                                                        }`}>
+                                                                        {entry.voucherType}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="py-3 px-4">
                                                                     <span className="text-sm font-medium text-gray-900">
-                                                                        {formatDate(entry.date)}
+                                                                        #{entry.voucherNo}
                                                                     </span>
-                                                                </div>
-                                                            </td>
-                                                            <td className="py-3 px-4">
-                                                                <div className="max-w-xs">
-                                                                    <p className="text-sm text-gray-900">
-                                                                        {entry.particulars}
-                                                                    </p>
-                                                                </div>
-                                                            </td>
-                                                            <td className="py-3 px-4">
-                                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${entry.voucherType === 'Booking'
-                                                                    ? 'bg-blue-100 text-blue-800'
-                                                                    : 'bg-green-100 text-green-800'
-                                                                    }`}>
-                                                                    {entry.voucherType}
-                                                                </span>
-                                                            </td>
-                                                            <td className="py-3 px-4">
-                                                                <span className="text-sm font-medium text-gray-900">
-                                                                    #{entry.voucherNo}
-                                                                </span>
-                                                            </td>
-                                                            <td className="py-3 px-4">
-                                                                {entry.debit > 0 && (
-                                                                    <span className="text-sm font-bold text-red-700">
-                                                                        ₹{formatCurrency(entry.debit)}
+                                                                </td>
+                                                                <td className="py-3 px-4">
+                                                                    {entry.debit > 0 && (
+                                                                        <span className="text-sm font-bold text-red-700">
+                                                                            ₹{formatCurrency(entry.debit)}
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="py-3 px-4">
+                                                                    {entry.credit > 0 && (
+                                                                        <span className="text-sm font-bold text-green-700">
+                                                                            ₹{formatCurrency(entry.credit)}
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="py-3 px-4">
+                                                                    <span className={`text-sm font-bold ${entry.balance > 0
+                                                                        ? 'text-red-700'
+                                                                        : entry.balance < 0
+                                                                            ? 'text-green-700'
+                                                                            : 'text-gray-700'
+                                                                        }`}>
+                                                                        ₹{formatCurrency(entry.balance)}
                                                                     </span>
-                                                                )}
-                                                            </td>
-                                                            <td className="py-3 px-4">
-                                                                {entry.credit > 0 && (
-                                                                    <span className="text-sm font-bold text-green-700">
-                                                                        ₹{formatCurrency(entry.credit)}
+                                                                </td>
+                                                                <td className="py-3 px-4">
+                                                                    <span className={`px-2 py-1 rounded text-xs font-medium ${entry.balanceType === 'Dr'
+                                                                        ? 'bg-red-100 text-red-800'
+                                                                        : 'bg-green-100 text-green-800'
+                                                                        }`}>
+                                                                        {entry.balanceType}
                                                                     </span>
-                                                                )}
-                                                            </td>
-                                                            <td className="py-3 px-4">
-                                                                <span className={`text-sm font-bold ${entry.balance > 0
-                                                                    ? 'text-red-700'
-                                                                    : entry.balance < 0
-                                                                        ? 'text-green-700'
-                                                                        : 'text-gray-700'
-                                                                    }`}>
-                                                                    ₹{formatCurrency(entry.balance)}
-                                                                </span>
-                                                            </td>
-                                                            <td className="py-3 px-4">
-                                                                <span className={`px-2 py-1 rounded text-xs font-medium ${entry.balanceType === 'Dr'
-                                                                    ? 'bg-red-100 text-red-800'
-                                                                    : 'bg-green-100 text-green-800'
-                                                                    }`}>
-                                                                    {entry.balanceType}
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
+                                                                </td>
+                                                                <td className="py-3 px-4">
+                                                                    {isBookingEntry && bookingId ? (
+                                                                        <button
+                                                                            onClick={() => downloadBookingPdf(bookingId, entry.voucherNo)}
+                                                                            disabled={downloadingPdf[bookingId]}
+                                                                            className={`p-1.5 rounded-md transition-colors ${downloadingPdf[bookingId]
+                                                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                                                : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                                                                                }`}
+                                                                            title="Download Booking PDF"
+                                                                        >
+                                                                            {downloadingPdf[bookingId] ? (
+                                                                                <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                                                                            ) : (
+                                                                                <FileDown className="w-4 h-4" />
+                                                                            )}
+                                                                        </button>
+                                                                    ) : (
+                                                                        <span className="text-gray-400 text-xs">-</span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
                                                 </tbody>
                                             </table>
                                         </div>
@@ -940,12 +1419,6 @@ const PartyTransactionLedger = () => {
                                         <div className="mt-6 pt-6 border-t border-gray-200">
                                             <div className="flex justify-end">
                                                 <div className="text-right">
-                                                    {/* <div className="flex items-center justify-between mb-2">
-                                                        <span className="text-sm text-gray-600 mr-4">Opening Balance:</span>
-                                                        <span className="text-sm font-bold text-gray-900">
-                                                            ₹{formatCurrency(ledgerData.openingBalance)}
-                                                        </span>
-                                                    </div> */}   
                                                     <div className="flex items-center justify-between mb-2">
                                                         <span className="text-sm text-gray-600 mr-4">Total Debit:</span>
                                                         <span className="text-sm font-bold text-red-700">

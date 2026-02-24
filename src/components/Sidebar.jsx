@@ -19,7 +19,8 @@ import {
     NotebookPen,
     BookOpenText,
     Library,
-    ArrowRightLeft
+    ArrowRightLeft,
+    History,
 } from 'lucide-react';
 import { GiWallet } from "react-icons/gi";
 import { FaMoneyBillTransfer } from "react-icons/fa6";
@@ -70,7 +71,7 @@ const menuGroups = [
             },
             // { icon: Library, label: 'Day Book', to: '/daybook' },
             // { icon: CreditCard, label: 'Create Multi Payment', to: '/create-multi-payment' },
-            // { icon: Receipt, label: 'Multi Payment Register', to: '/multi-paymen-register' },
+            { icon: History, label: 'Haltings', to: '/halting' },
             { icon: Truck, label: 'STC Truck', to: '/STC-Truck' },
             { icon: Package, label: 'STC Commodity', to: '/STC-Commodity' },
             // { icon: Shredder, label: 'Pending Commission', to: '/pending-commission' },

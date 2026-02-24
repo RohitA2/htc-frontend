@@ -17,7 +17,9 @@ import {
     Receipt,
     Download,
     MoreVertical,
-    ClipboardClock
+    ClipboardClock,
+    Users,
+    Layers
 } from 'lucide-react';
 import { debounce } from 'lodash';
 import * as XLSX from 'xlsx';
@@ -39,7 +41,7 @@ const PartyLedger = () => {
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
 
-    // Payment Modal states
+    // Payment Modal states (for partial payment from dropdown)
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [selectedParty, setSelectedParty] = useState(null);
@@ -50,17 +52,33 @@ const PartyLedger = () => {
         type: 'Credit',
         utrNo: '',
         remarks: '',
-        bankId: ''
+        bankId: '',
+        bankAccountNo: ''
     });
     const [processingPayment, setProcessingPayment] = useState(false);
     const [banks, setBanks] = useState([]);
     const [loadingBanks, setLoadingBanks] = useState(false);
+
+    // Bulk Payment for Single Party states (for full payment from action column)
+    const [showSinglePartyBulkModal, setShowSinglePartyBulkModal] = useState(false);
+    const [selectedPartyForBulk, setSelectedPartyForBulk] = useState(null);
+    const [singlePartyBulkForm, setSinglePartyBulkForm] = useState({
+        amount: '',
+        date: new Date().toISOString().split('T')[0],
+        mode: 'cash',
+        utrNo: '',
+        remarks: '',
+        bankId: '',
+        bankAccountNo: ''
+    });
+    const [processingSinglePartyBulk, setProcessingSinglePartyBulk] = useState(false);
 
     // Payment History Modal
     const [showPaymentHistory, setShowPaymentHistory] = useState(false);
     const [selectedPaymentHistory, setSelectedPaymentHistory] = useState([]);
 
     const API_URL = import.meta.env.VITE_API_BASE_URL;
+
     // Debounced search
     const debouncedFetchParties = useCallback(
         debounce(async (search, status, fromDate, toDate) => {
@@ -101,16 +119,26 @@ const PartyLedger = () => {
 
     // Fetch banks when payment mode is bank
     useEffect(() => {
-        if (showPaymentModal && paymentForm.mode === 'bank' && selectedParty) {
-            const companyId = companyIdMap[selectedParty.partyId];
-            if (companyId) {
-                fetchBanks(companyId);
-            } else {
-                // If companyId is not in map, try to fetch it from party details
-                fetchCompanyIdForParty(selectedParty.partyId);
+        if ((showPaymentModal || showSinglePartyBulkModal) &&
+            (paymentForm.mode === 'bank' || singlePartyBulkForm.mode === 'bank') &&
+            (selectedParty || selectedPartyForBulk)) {
+
+            let partyId = null;
+            if (selectedParty) partyId = selectedParty.partyId;
+            else if (selectedPartyForBulk) partyId = selectedPartyForBulk.partyId;
+
+            if (partyId) {
+                const companyId = companyIdMap[partyId];
+                if (companyId) {
+                    fetchBanks(companyId);
+                } else {
+                    fetchCompanyIdForParty(partyId);
+                }
             }
         }
-    }, [showPaymentModal, paymentForm.mode, selectedParty, companyIdMap]);
+    }, [showPaymentModal, showSinglePartyBulkModal,
+        paymentForm.mode, singlePartyBulkForm.mode,
+        selectedParty, selectedPartyForBulk, companyIdMap]);
 
     const fetchCompanyIdForParty = async (partyId) => {
         try {
@@ -121,7 +149,6 @@ const PartyLedger = () => {
                     ...prev,
                     [partyId]: details.bookings[0].companyId
                 }));
-                // Now fetch banks with the companyId
                 fetchBanks(details.bookings[0].companyId);
             }
         } catch (error) {
@@ -206,23 +233,8 @@ const PartyLedger = () => {
         }
     };
 
-    // Open payment modal for party
-    const handleOpenPartyPaymentModal = (party) => {
-        setSelectedParty(party);
-        setSelectedBooking(null);
-        setPaymentForm({
-            amount: party.balance > 0 ? party.balance.toString() : '',
-            date: new Date().toISOString().split('T')[0],
-            mode: 'cash',
-            type: 'Credit',
-            utrNo: '',
-            remarks: `Payment for ${party.partyName}`,
-            bankId: ''
-        });
-        setShowPaymentModal(true);
-    };
-
-    // Open payment modal for booking
+    // ==================== PAYMENT HANDLERS ====================
+    // Open partial payment modal for specific booking (from expanded row)
     const handleOpenBookingPaymentModal = (booking, party) => {
         setSelectedBooking(booking);
         setSelectedParty(party);
@@ -232,10 +244,100 @@ const PartyLedger = () => {
             mode: 'cash',
             type: 'Credit',
             utrNo: '',
-            remarks: `Payment for Booking #${booking.bookingId || ''}`,
-            bankId: ''
+            remarks: `Partial payment for Booking #${booking.bookingId || ''}`,
+            bankId: '',
+            bankAccountNo: ''
         });
         setShowPaymentModal(true);
+    };
+
+    // ==================== SINGLE PARTY BULK PAYMENT HANDLER (from Action column) ====================
+    const handleOpenSinglePartyBulkModal = (party) => {
+        setSelectedPartyForBulk(party);
+        setSinglePartyBulkForm({
+            amount: party.balance > 0 ? party.balance.toString() : '',
+            date: new Date().toISOString().split('T')[0],
+            mode: 'cash',
+            utrNo: '',
+            remarks: `Full payment for all bookings of ${party.partyName}`,
+            bankId: '',
+            bankAccountNo: ''
+        });
+        setShowSinglePartyBulkModal(true);
+    };
+
+    const handleSinglePartyBulkSubmit = async (e) => {
+        e.preventDefault();
+        if (!selectedPartyForBulk) return;
+
+        if (!singlePartyBulkForm.amount || parseFloat(singlePartyBulkForm.amount) <= 0) {
+            toast.error('Please enter a valid amount');
+            return;
+        }
+
+        try {
+            setProcessingSinglePartyBulk(true);
+
+            const selectedBank = banks.find(b => b.id === singlePartyBulkForm.bankId);
+
+            const paymentData = {
+                partyId: selectedPartyForBulk.partyId,
+                amount: parseFloat(singlePartyBulkForm.amount) || 0,
+                paymentDate: singlePartyBulkForm.date,
+                paymentMode: singlePartyBulkForm.mode,
+                utrNo: singlePartyBulkForm.utrNo || null,
+                remark: singlePartyBulkForm.remarks || `Full payment for ${selectedPartyForBulk.partyName}`,
+                bankAccountNo: singlePartyBulkForm.mode === 'bank' ? selectedBank?.accountNo : null
+            };
+
+            const response = await axios.post(`${API_URL}/ledger/party-bulk-payment`, paymentData);
+
+            if (response.data.success) {
+                toast.success(`Full payment of ₹${formatCurrency(singlePartyBulkForm.amount)} processed successfully for ${selectedPartyForBulk.partyName}!`);
+
+                // Refresh data
+                debouncedFetchParties(searchTerm, statusFilter, fromDate, toDate);
+
+                // Refresh the specific party details
+                if (selectedPartyForBulk.partyId) {
+                    try {
+                        const detailsResponse = await axios.get(`${API_URL}/ledger/party-details/${selectedPartyForBulk.partyId}`);
+                        setPartyDetails(prev => ({
+                            ...prev,
+                            [selectedPartyForBulk.partyId]: detailsResponse.data
+                        }));
+                    } catch (error) {
+                        console.error('Error refreshing party details:', error);
+                        setPartyDetails(prev => {
+                            const newDetails = { ...prev };
+                            delete newDetails[selectedPartyForBulk.partyId];
+                            return newDetails;
+                        });
+                    }
+                }
+
+                // Close modal and reset
+                setShowSinglePartyBulkModal(false);
+                setSelectedPartyForBulk(null);
+                setSinglePartyBulkForm({
+                    amount: '',
+                    date: new Date().toISOString().split('T')[0],
+                    mode: 'cash',
+                    utrNo: '',
+                    remarks: '',
+                    bankId: '',
+                    bankAccountNo: ''
+                });
+            } else {
+                throw new Error(response.data.message || 'Bulk payment failed');
+            }
+
+        } catch (error) {
+            console.error('Error processing bulk payment for party:', error);
+            toast.error(error.response?.data?.message || 'Failed to process bulk payment. Please try again.');
+        } finally {
+            setProcessingSinglePartyBulk(false);
+        }
     };
 
     // Open payment history modal
@@ -256,13 +358,16 @@ const PartyLedger = () => {
         setShowPaymentHistory(true);
     };
 
-    // Handle payment submission
+    // Handle single/partial payment submission (from expanded row)
     const handlePaymentSubmit = async (e) => {
         e.preventDefault();
         if (!selectedParty) return;
 
         try {
             setProcessingPayment(true);
+
+            const selectedBank = banks.find(b => b.id === paymentForm.bankId);
+
             const paymentData = {
                 partyId: selectedParty.partyId,
                 bookingId: selectedBooking?.bookingId || null,
@@ -271,11 +376,10 @@ const PartyLedger = () => {
                 paymentMode: paymentForm.mode,
                 paymentType: paymentForm.type,
                 utrNo: paymentForm.utrNo || null,
-                remarks: paymentForm.remarks,
-                bankId: paymentForm.mode === 'bank' ? paymentForm.bankId : null
+                remark: paymentForm.remarks,
+                bankAccountNo: paymentForm.mode === 'bank' ? selectedBank?.accountNo : null
             };
 
-            // Call make-payment API
             const response = await axios.post(`${API_URL}/ledger/party-partial-payment`, paymentData);
 
             if (response.data.success) {
@@ -292,7 +396,6 @@ const PartyLedger = () => {
                         }));
                     } catch (error) {
                         console.error('Error refreshing party details:', error);
-                        // Remove from cache to force reload next time
                         setPartyDetails(prev => {
                             const newDetails = { ...prev };
                             delete newDetails[selectedParty.partyId];
@@ -312,10 +415,11 @@ const PartyLedger = () => {
                     type: 'Credit',
                     utrNo: '',
                     remarks: '',
-                    bankId: ''
+                    bankId: '',
+                    bankAccountNo: ''
                 });
 
-                toast.success('Payment processed successfully!');
+                toast.success('Partial payment processed successfully!');
             } else {
                 throw new Error(response.data.message || 'Payment failed');
             }
@@ -646,10 +750,11 @@ const PartyLedger = () => {
                                 <thead className="bg-gray-50 border-b border-gray-200">
                                     <tr>
                                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Party Details</th>
-                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Truck(s)</th>   {/* ← new column */}
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Truck(s)</th>
                                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Freight</th>
                                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid</th>
                                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
                                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
@@ -660,6 +765,8 @@ const PartyLedger = () => {
                                         const details = partyDetails[party.partyId];
                                         const isLoading = loadingDetails[party.partyId];
                                         const hasHistory = hasPaymentHistory(party.partyId);
+                                        const totalAmount = parseFloat(party.totalFreight) || 0;
+                                        const isPending = (parseFloat(party.balance) || 0) > 0;
 
                                         return (
                                             <React.Fragment key={party.partyId}>
@@ -700,7 +807,7 @@ const PartyLedger = () => {
                                                         </div>
                                                     </td>
                                                     <td className="py-3 px-4">
-                                                        <div className={`text-sm font-bold ${(party.balance || 0) > 0 ? 'text-red-700' :
+                                                        <div className={`text-sm font-bold ${isPending ? 'text-red-700' :
                                                             (party.balance || 0) < 0 ? 'text-purple-700' :
                                                                 'text-gray-700'
                                                             }`}>
@@ -708,16 +815,32 @@ const PartyLedger = () => {
                                                         </div>
                                                     </td>
                                                     <td className="py-3 px-4">
-                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(party.balance || 0) > 0 ? 'bg-red-100 text-red-800' :
+                                                        <div className="text-sm font-bold text-blue-700">
+                                                            ₹{formatCurrency(totalAmount)}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isPending ? 'bg-red-100 text-red-800' :
                                                             (party.balance || 0) < 0 ? 'bg-purple-100 text-purple-800' :
                                                                 'bg-green-100 text-green-800'
                                                             }`}>
-                                                            {(party.balance || 0) > 0 ? 'Pending' :
+                                                            {isPending ? 'Pending' :
                                                                 (party.balance || 0) < 0 ? 'Overpaid' : 'Settled'}
                                                         </span>
                                                     </td>
                                                     <td className="py-3 px-4">
-                                                        <div className="flex space-x-2">
+                                                        <div className="flex items-center space-x-2">
+                                                            {/* Only Bulk Pay button for full payment */}
+                                                            {isPending && (
+                                                                <button
+                                                                    onClick={() => handleOpenSinglePartyBulkModal(party)}
+                                                                    className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 flex items-center space-x-1"
+                                                                    title="Make Full Payment for All Bookings"
+                                                                >
+                                                                    <Layers className="w-3.5 h-3.5" />
+                                                                    <span>Bulk Pay</span>
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 onClick={() => handleOpenPaymentHistory(party.partyId)}
                                                                 disabled={!hasHistory}
@@ -725,9 +848,10 @@ const PartyLedger = () => {
                                                                     ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                                                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                                                     }`}
+                                                                title="View Payment History"
                                                             >
-                                                                <ClipboardClock className="w-4 h-4 mr-2 text-blue-600" />
-                                                                <span>View History</span>
+                                                                <ClipboardClock className="w-3.5 h-3.5" />
+                                                                <span>History</span>
                                                             </button>
                                                         </div>
                                                     </td>
@@ -744,7 +868,7 @@ const PartyLedger = () => {
                                                                         <p className="text-gray-600 text-sm">Loading party details...</p>
                                                                     </div>
                                                                 ) : details ? (
-                                                                    <div className="max-w-full ">
+                                                                    <div className="max-w-full">
                                                                         {/* Bookings Section */}
                                                                         <div>
                                                                             <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
@@ -785,13 +909,17 @@ const PartyLedger = () => {
                                                                                                                     </span>
                                                                                                                 </div>
                                                                                                             </div>
-
-
                                                                                                         </div>
                                                                                                     </div>
 
                                                                                                     {/* Booking Financials */}
-                                                                                                    <div className="grid grid-cols-3 gap-3 mb-4">
+                                                                                                    <div className="grid grid-cols-4 gap-3 mb-4">
+                                                                                                        <div className="text-center p-3 bg-blue-50 rounded">
+                                                                                                            <p className="text-xs text-gray-600 mb-1">Total Amount</p>
+                                                                                                            <p className="text-sm font-bold text-blue-700">
+                                                                                                                ₹{formatCurrency(booking.freight)}
+                                                                                                            </p>
+                                                                                                        </div>
                                                                                                         <div className="text-center p-3 bg-orange-50 rounded">
                                                                                                             <p className="text-xs text-gray-600 mb-1">Freight</p>
                                                                                                             <p className="text-sm font-bold text-orange-700">
@@ -818,15 +946,15 @@ const PartyLedger = () => {
                                                                                                         </div>
                                                                                                     </div>
 
-                                                                                                    {/* Payment Action */}
+                                                                                                    {/* Partial Payment Button */}
                                                                                                     {(booking.balance || 0) > 0 && (
                                                                                                         <div className="mb-4">
                                                                                                             <button
                                                                                                                 onClick={() => handleOpenBookingPaymentModal(booking, party)}
-                                                                                                                className="w-full px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 flex items-center justify-center space-x-2"
+                                                                                                                className="w-full px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 flex items-center justify-center space-x-2"
                                                                                                             >
-                                                                                                                <CreditCard className="w-4 h-4" />
-                                                                                                                <span>Add Payment for This Booking</span>
+                                                                                                                <DollarSign className="w-4 h-4" />
+                                                                                                                <span>Make Partial Payment for This Booking</span>
                                                                                                             </button>
                                                                                                         </div>
                                                                                                     )}
@@ -865,9 +993,8 @@ const PartyLedger = () => {
                                                                                                                                     </span>
                                                                                                                                 </td>
                                                                                                                                 <td className="py-2 px-3">
-                                                                                                                                    <span className={`px-2 py-1 rounded text-xs ${payment.mode === 'cash' ? 'bg-green-100 text-green-800' :
-                                                                                                                                        payment.mode === 'bank' ? 'bg-blue-100 text-blue-800' :
-                                                                                                                                            'bg-yellow-100 text-yellow-800'
+                                                                                                                                    <span className={`px-2 py-1 rounded text-xs ${payment.type === 'Credit' ? 'bg-green-100 text-green-800' :
+                                                                                                                                        'bg-red-100 text-red-800'
                                                                                                                                         }`}>
                                                                                                                                         {payment.type || 'N/A'}
                                                                                                                                     </span>
@@ -936,17 +1063,17 @@ const PartyLedger = () => {
                 )}
             </div>
 
-            {/* Payment Modal */}
+            {/* Partial Payment Modal (from expanded row) */}
             {showPaymentModal && selectedParty && (
-                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+                <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
                         {/* Modal Header */}
                         <div className="p-4 border-b border-gray-200">
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <h2 className="text-lg font-medium text-gray-900">Add Payment Entry</h2>
+                                    <h2 className="text-lg font-medium text-gray-900">Add Partial Payment</h2>
                                     <p className="text-sm text-gray-600 mt-1">
-                                        {selectedParty.partyName} • {selectedBooking ? `Booking #${selectedBooking.bookingId}` : 'General Payment'}
+                                        {selectedParty.partyName} • Booking #{selectedBooking?.bookingId}
                                     </p>
                                 </div>
                                 <button
@@ -967,17 +1094,15 @@ const PartyLedger = () => {
                                         <div>
                                             <p className="text-gray-600">Current Pending Balance</p>
                                             <p className="font-bold text-red-700">
-                                                ₹{formatCurrency(selectedBooking ? (selectedBooking.balance || 0) : (selectedParty.balance || 0))}
+                                                ₹{formatCurrency(selectedBooking?.balance || 0)}
                                             </p>
                                         </div>
-                                        {selectedBooking && (
-                                            <div>
-                                                <p className="text-gray-600">Total Booking Freight</p>
-                                                <p className="font-bold text-orange-700">
-                                                    ₹{formatCurrency(selectedBooking.freight)}
-                                                </p>
-                                            </div>
-                                        )}
+                                        <div>
+                                            <p className="text-gray-600">Total Booking Freight</p>
+                                            <p className="font-bold text-orange-700">
+                                                ₹{formatCurrency(selectedBooking?.freight)}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -991,14 +1116,14 @@ const PartyLedger = () => {
                                             type="number"
                                             required
                                             min="1"
-                                            max={selectedBooking ? (selectedBooking.balance || 0) : (selectedParty.balance || 0)}
+                                            max={selectedBooking?.balance || 0}
                                             value={paymentForm.amount}
                                             onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                             placeholder="Enter amount"
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
-                                            Maximum: ₹{formatCurrency(selectedBooking ? (selectedBooking.balance || 0) : (selectedParty.balance || 0))}
+                                            Maximum: ₹{formatCurrency(selectedBooking?.balance || 0)}
                                         </p>
                                     </div>
 
@@ -1060,7 +1185,14 @@ const PartyLedger = () => {
                                                     <select
                                                         required
                                                         value={paymentForm.bankId}
-                                                        onChange={(e) => setPaymentForm({ ...paymentForm, bankId: e.target.value })}
+                                                        onChange={(e) => {
+                                                            const selectedBank = banks.find(b => b.id === e.target.value);
+                                                            setPaymentForm({
+                                                                ...paymentForm,
+                                                                bankId: e.target.value,
+                                                                bankAccountNo: selectedBank?.accountNo || ''
+                                                            });
+                                                        }}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                     >
                                                         <option value="">Select a bank</option>
@@ -1127,7 +1259,198 @@ const PartyLedger = () => {
                                     ) : (
                                         <>
                                             <CheckCircle className="w-4 h-4" />
-                                            <span>Submit Payment</span>
+                                            <span>Submit Partial Payment</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Single Party Bulk Payment Modal (Full Payment) */}
+            {showSinglePartyBulkModal && selectedPartyForBulk && (
+                <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
+                        {/* Modal Header */}
+                        <div className="p-4 border-b border-gray-200">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h2 className="text-lg font-medium text-gray-900">Full Payment</h2>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                        {selectedPartyForBulk.partyName}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Total Balance: ₹{formatCurrency(selectedPartyForBulk.balance)}
+                                    </p>
+                                    <p className="text-xs text-blue-600 mt-1">
+                                        This payment will be distributed across all pending bookings
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setShowSinglePartyBulkModal(false)}
+                                    className="p-1 hover:bg-gray-100 rounded"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Modal Body */}
+                        <form onSubmit={handleSinglePartyBulkSubmit} className="p-4">
+                            <div className="space-y-4">
+                                {/* Payment Info */}
+                                <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                                    <div className="text-sm">
+                                        <p className="text-gray-600">Payment Distribution</p>
+                                        <p className="font-medium text-gray-800 mt-1">
+                                            Amount will be automatically distributed across all pending bookings
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Oldest bookings will be settled first
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Payment Form */}
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Amount (₹) *
+                                        </label>
+                                        <input
+                                            type="number"
+                                            required
+                                            min="1"
+                                            max={selectedPartyForBulk.balance}
+                                            value={singlePartyBulkForm.amount}
+                                            onChange={(e) => setSinglePartyBulkForm({ ...singlePartyBulkForm, amount: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                            placeholder="Enter amount"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Maximum: ₹{formatCurrency(selectedPartyForBulk.balance)}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Payment Date *
+                                        </label>
+                                        <input
+                                            type="date"
+                                            required
+                                            value={singlePartyBulkForm.date}
+                                            onChange={(e) => setSinglePartyBulkForm({ ...singlePartyBulkForm, date: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Payment Mode *
+                                        </label>
+                                        <select
+                                            value={singlePartyBulkForm.mode}
+                                            onChange={(e) => setSinglePartyBulkForm({ ...singlePartyBulkForm, mode: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                        >
+                                            <option value="cash">Cash</option>
+                                            <option value="bank">Bank</option>
+                                        </select>
+                                    </div>
+
+                                    {singlePartyBulkForm.mode === 'bank' && (
+                                        <>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Select Bank *
+                                                </label>
+                                                {loadingBanks ? (
+                                                    <div className="flex items-center justify-center py-2">
+                                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+                                                        <span className="text-sm text-gray-600">Loading banks...</span>
+                                                    </div>
+                                                ) : banks.length > 0 ? (
+                                                    <select
+                                                        required
+                                                        value={singlePartyBulkForm.bankId}
+                                                        onChange={(e) => {
+                                                            const selectedBank = banks.find(b => b.id === e.target.value);
+                                                            setSinglePartyBulkForm({
+                                                                ...singlePartyBulkForm,
+                                                                bankId: e.target.value,
+                                                                bankAccountNo: selectedBank?.accountNo || ''
+                                                            });
+                                                        }}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                    >
+                                                        <option value="">Select a bank</option>
+                                                        {banks.map((bank) => (
+                                                            <option key={bank.id} value={bank.id}>
+                                                                {bank.acHolderName} - {bank.accountNo} {bank.isPrimary && '(Primary)'}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                ) : (
+                                                    <p className="text-sm text-red-600">No banks found. Please add banks first.</p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    UTR/Reference Number
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={singlePartyBulkForm.utrNo}
+                                                    onChange={(e) => setSinglePartyBulkForm({ ...singlePartyBulkForm, utrNo: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                    placeholder="Enter UTR/Reference"
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Remarks
+                                        </label>
+                                        <textarea
+                                            value={singlePartyBulkForm.remarks}
+                                            onChange={(e) => setSinglePartyBulkForm({ ...singlePartyBulkForm, remarks: e.target.value })}
+                                            rows="2"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                            placeholder="Add remarks..."
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="flex justify-end space-x-2 mt-6 pt-4 border-t border-gray-200">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowSinglePartyBulkModal(false)}
+                                    className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={processingSinglePartyBulk || (singlePartyBulkForm.mode === 'bank' && !singlePartyBulkForm.bankId)}
+                                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+                                >
+                                    {processingSinglePartyBulk ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                            <span>Processing...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Layers className="w-4 h-4" />
+                                            <span>Process Full Payment</span>
                                         </>
                                     )}
                                 </button>

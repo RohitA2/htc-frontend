@@ -181,7 +181,7 @@ const ChallanList = () => {
 
     try {
       setDeleteLoading(true);
-      const response = await axios.delete(`${API_URL}/challans/${selectedChallan.id}`);
+      const response = await axios.delete(`${API_URL}/challans/soft-delete/${selectedChallan.id}`);
 
       if (response.data.success) {
         toast.success('Challan deleted successfully!');
@@ -320,9 +320,9 @@ const ChallanList = () => {
               </button>
               <button
                 onClick={handleCreateChallan}
-                className="inline-flex items-center px-4 py-2.5 bg-linear-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                className="inline-flex cursor-pointer items-center px-4 py-2.5 bg-linear-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
               >
-                <PlusIcon className="h-5 w-5 mr-2" />
+                <PlusIcon className="h-5 w-5 mr-2 " />
                 Create Challan
               </button>
             </div>

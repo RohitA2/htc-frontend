@@ -67,6 +67,7 @@ const DayBook = lazy(() => import('./components/accounting/DayBook'));
 const TrailBalance = lazy(() => import('./components/accounting/TrailBalance'));
 const BalanceSheet = lazy(() => import('./components/accounting/BalanceSheet'));
 const CommissionLedger = lazy(() => import('./components/commission/CommissionLedger'));
+const Halting = lazy(() => import('./components/haltings/Halting'));
 
 
 const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
@@ -98,26 +99,26 @@ const App = () => {
             <Route path="/register" element={<Register />} />
 
             {/* ===================== Protected Routes ===================== */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<Layout />}>
-                <Route path="/" element={<SearchPage />} />
-                <Route path="/company" element={<Company />} />
-                <Route path="/bank" element={<BankPage />} />
-                <Route path="/booking" element={<BookingList />} />
-                <Route path="/challan" element={<ChallanList />} />
-                <Route path="/booking-list" element={<BookingList />} />
-                <Route path="/party-payments" element={<PartyLedger />} />
-                <Route path="/vendor-payments" element={<VendorLedger />} />
-                <Route path="/party-transactions" element={<PartyTransactions />} />
-                <Route path="/vendor-transactions" element={<VendorTransactions />} />
-                <Route path="/daybook" element={<DayBook />} />
-                <Route path="/trail-balance" element={<TrailBalance />} />
-                <Route path="/balance-sheet" element={<BalanceSheet />} />
-                <Route path="/commission-ledger" element={<CommissionLedger />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/change-password" element={<ChangePassword />} />
-              </Route>
+            {/* <Route element={<ProtectedRoute />}> */}
+            <Route element={<Layout />}>
+              <Route path="/" element={<SearchPage />} />
+              <Route path="/company" element={<Company />} />
+              <Route path="/bank" element={<BankPage />} />
+              <Route path="/booking" element={<BookingList />} />
+              <Route path="/challan" element={<ChallanList />} />
+              <Route path="/party-payments" element={<PartyLedger />} />
+              <Route path="/vendor-payments" element={<VendorLedger />} />
+              <Route path="/party-transactions" element={<PartyTransactions />} />
+              <Route path="/vendor-transactions" element={<VendorTransactions />} />
+              <Route path="/halting" element={<Halting />} />
+              <Route path="/daybook" element={<DayBook />} />
+              <Route path="/trail-balance" element={<TrailBalance />} />
+              <Route path="/balance-sheet" element={<BalanceSheet />} />
+              <Route path="/commission-ledger" element={<CommissionLedger />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/change-password" element={<ChangePassword />} />
             </Route>
+            {/* </Route> */}
 
             {/* ===================== Fallback ===================== */}
             <Route path="*" element={<Navigate to="/login" replace />} />

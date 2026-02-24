@@ -514,6 +514,17 @@ const Step2FinancialDetails = ({ formData, handleChange, handleCalculate, calcul
                                             />
                                         </div>
                                         <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Account Holder Name</label>
+                                            <input
+                                                type="text"
+                                                name="bankAcHolderName"
+                                                value={formData.bankAcHolderName}
+                                                onChange={handleChange}
+                                                placeholder="Account Holder Name"
+                                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                            />
+                                        </div>
+                                        <div>
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment Date</label>
                                             <input
                                                 type="date"
